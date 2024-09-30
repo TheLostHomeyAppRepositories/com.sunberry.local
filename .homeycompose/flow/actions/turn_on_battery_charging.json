@@ -1,0 +1,21 @@
+{
+    "id": "turn_on_battery_charging",
+    "args": [
+      {
+        "name": "limit",
+        "type": "number",
+        "title": {
+          "en": "Charging limit (W)"
+        },
+        "min": 100,
+        "max": 10000
+      }
+    ],
+    "title": {
+      "en": "Turn on force battery charging with defined W"
+    },
+    "titleFormatted": {
+      "en": "Turn on force battery charging with [[limit]] W"
+    }
+  }
+  

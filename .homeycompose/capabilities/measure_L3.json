@@ -1,0 +1,16 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Phase 3 Power (W)"
+  },
+  "getable": true,
+  "setable": false,
+  "insights": true,
+  "uiComponent": "sensor",
+  "icon": "/assets/images/power.svg",
+  "units": {
+    "en": "W"
+  },
+  "decimals": 0,
+  "min": 0
+}

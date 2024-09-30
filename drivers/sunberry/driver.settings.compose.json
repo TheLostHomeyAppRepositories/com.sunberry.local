@@ -1,0 +1,26 @@
+[
+  {
+    "id": "update_interval",
+    "type": "number",
+    "label": {
+      "en": "Polling interval in seconds (default 5s)"
+    },
+    "hint": {
+      "en": "Set the interval for data updates from the Sunberry."
+    },
+    "value": 5,
+    "min": 1
+  },
+  {
+    "id": "force_charging_limit",
+    "type": "number",
+    "label": {
+      "en": "Force Charging Limit (W)"
+    },
+    "hint": {
+      "en": "Set the power limit for force charging mode."
+    },
+    "value": 5000,
+    "min": 100
+  }
+]

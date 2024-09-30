@@ -1,0 +1,53 @@
+{
+  "id": "com.sunberry.local",
+  "version": "1.0.0",
+  "compatibility": ">=12.0.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "Sunberry"
+  },
+  "description": {
+    "en": "Adds support for sunberry (unipy) device"
+  },
+  "category": [
+    "energy"
+  ],
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "Jiri Pech",
+    "email": "jiri.pech@centrum.cz"
+  },
+  "brandColor": "#de0618",
+  "source": "https://github.com/PechJiri/sunberry",
+  "homepage": "https://spotovaelektrina.cz/",
+  "support": "mailto:jiri.pech@centrum.cz",
+  "homeyCommunityTopicId": 0,
+  "drivers": [
+    {
+      "id": "sunberry",
+      "name": {
+        "en": "Sunberry"
+      },
+      "connectivity": [
+        "lan",
+        "cloud"
+      ],
+      "capabilities": [
+        "force_charging",
+        "block_battery_discharge",
+        "measure_L1",
+        "measure_L2",
+        "measure_L3",
+        "measure_total"
+      ]
+    }
+  ]
+}

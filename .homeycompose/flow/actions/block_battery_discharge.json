@@ -1,0 +1,7 @@
+{
+    "id": "block_battery_discharge",
+    "title": {
+      "en": "Block battery discharge"
+    },
+    "handler": "blockBatteryDischarge"
+  }

@@ -1,0 +1,118 @@
+{
+  "id": "sunberry",
+  "name": {
+    "en": "Sunberry"
+  },
+  "class": "other",
+  "capabilities": [
+    "force_charging",
+    "block_battery_discharge",
+    "measure_L1",
+    "measure_L2",
+    "measure_L3",
+    "measure_total"
+  ],
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "lan",
+    "cloud"
+  ],
+  "images": {
+    "small": "{{driverAssetsPath}}/images/small.png",
+    "large": "{{driverAssetsPath}}/images/large.png",
+    "xlarge": "{{driverAssetsPath}}/images/xlarge.png"
+  },
+  "capabilityOptions": {
+    "force_charging": {
+      "type": "boolean",
+      "title": {
+        "en": "Force Charging"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": false,
+      "uiComponent": "toggle"
+    },
+    "block_battery_discharge": {
+      "type": "boolean",
+      "title": {
+        "en": "Block Battery Discharge"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": false,
+      "uiComponent": "toggle"
+    },
+    "measure_L1": {
+      "type": "number",
+      "title": {
+        "en": "L1 Power (W)"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "min": 0
+    },
+    "measure_L2": {
+      "type": "number",
+      "title": {
+        "en": "L2 Power (W)"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "min": 0
+    },
+    "measure_L3": {
+      "type": "number",
+      "title": {
+        "en": "L3 Power (W)"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "min": 0
+    },
+    "measure_total": {
+      "type": "number",
+      "title": {
+        "en": "Total Power (W)"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "units": {
+        "en": "W"
+      },
+      "decimals": 2,
+      "min": 0
+    }
+  },
+  "pair": [
+    {
+      "id": "list_my_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_my_devices"
+      }
+    },
+    {
+      "id": "add_my_devices",
+      "template": "add_devices"
+    }
+  ]
+}

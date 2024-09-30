@@ -1,0 +1,18 @@
+{
+    "type": "boolean",
+    "title": {
+      "en": "Blocking Battery Discharge"
+    },
+    "getable": true,
+    "setable": true,
+    "insights": false,
+    "uiComponent": "toggle",
+    "titleTrue": {
+      "en": "Battery discharging blocked"
+    },
+    "titleFalse": {
+      "en": "Battery is discharing normally"
+    },
+    "icon": "/assets/images/battery.svg"
+  }
+  

@@ -1,0 +1,339 @@
+{
+  "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
+  "id": "com.sunberry.local",
+  "version": "1.0.0",
+  "compatibility": ">=12.0.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "Sunberry"
+  },
+  "description": {
+    "en": "Adds support for sunberry (unipy) device"
+  },
+  "category": [
+    "energy"
+  ],
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "Jiri Pech",
+    "email": "jiri.pech@centrum.cz"
+  },
+  "brandColor": "#de0618",
+  "source": "https://github.com/PechJiri/sunberry",
+  "homepage": "https://spotovaelektrina.cz/",
+  "support": "mailto:jiri.pech@centrum.cz",
+  "homeyCommunityTopicId": 0,
+  "flow": {
+    "conditions": [
+      {
+        "id": "is_battery_discharge_blocked",
+        "title": {
+          "en": "Battery discharge is blocked"
+        }
+      },
+      {
+        "id": "is_force_charging",
+        "title": {
+          "en": "Battery is force charging"
+        }
+      }
+    ],
+    "actions": [
+      {
+        "id": "block_battery_discharge",
+        "title": {
+          "en": "Block battery discharge"
+        },
+        "handler": "blockBatteryDischarge"
+      },
+      {
+        "id": "enable_battery_discharge",
+        "title": {
+          "en": "Enable battery discharge"
+        },
+        "handler": "enableBatteryDischarge"
+      },
+      {
+        "id": "turn_off_battery_charging",
+        "title": {
+          "en": "Turn off force battery charging"
+        },
+        "handler": "turnOffBatteryCharging"
+      },
+      {
+        "id": "turn_on_battery_charging",
+        "args": [
+          {
+            "name": "limit",
+            "type": "number",
+            "title": {
+              "en": "Charging limit (W)"
+            },
+            "min": 100,
+            "max": 10000
+          }
+        ],
+        "title": {
+          "en": "Turn on force battery charging with defined W"
+        },
+        "titleFormatted": {
+          "en": "Turn on force battery charging with [[limit]] W"
+        }
+      }
+    ]
+  },
+  "drivers": [
+    {
+      "id": "sunberry",
+      "name": {
+        "en": "Sunberry"
+      },
+      "class": "other",
+      "capabilities": [
+        "force_charging",
+        "block_battery_discharge",
+        "measure_L1",
+        "measure_L2",
+        "measure_L3",
+        "measure_total"
+      ],
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan",
+        "cloud"
+      ],
+      "images": {
+        "small": "/drivers/sunberry/assets/images/small.png",
+        "large": "/drivers/sunberry/assets/images/large.png",
+        "xlarge": "/drivers/sunberry/assets/images/xlarge.png"
+      },
+      "capabilityOptions": {
+        "force_charging": {
+          "type": "boolean",
+          "title": {
+            "en": "Force Charging"
+          },
+          "getable": true,
+          "setable": true,
+          "insights": false,
+          "uiComponent": "toggle"
+        },
+        "block_battery_discharge": {
+          "type": "boolean",
+          "title": {
+            "en": "Block Battery Discharge"
+          },
+          "getable": true,
+          "setable": true,
+          "insights": false,
+          "uiComponent": "toggle"
+        },
+        "measure_L1": {
+          "type": "number",
+          "title": {
+            "en": "L1 Power (W)"
+          },
+          "getable": true,
+          "setable": false,
+          "insights": true,
+          "units": {
+            "en": "W"
+          },
+          "decimals": 2,
+          "min": 0
+        },
+        "measure_L2": {
+          "type": "number",
+          "title": {
+            "en": "L2 Power (W)"
+          },
+          "getable": true,
+          "setable": false,
+          "insights": true,
+          "units": {
+            "en": "W"
+          },
+          "decimals": 2,
+          "min": 0
+        },
+        "measure_L3": {
+          "type": "number",
+          "title": {
+            "en": "L3 Power (W)"
+          },
+          "getable": true,
+          "setable": false,
+          "insights": true,
+          "units": {
+            "en": "W"
+          },
+          "decimals": 2,
+          "min": 0
+        },
+        "measure_total": {
+          "type": "number",
+          "title": {
+            "en": "Total Power (W)"
+          },
+          "getable": true,
+          "setable": false,
+          "insights": true,
+          "units": {
+            "en": "W"
+          },
+          "decimals": 2,
+          "min": 0
+        }
+      },
+      "pair": [
+        {
+          "id": "list_my_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_my_devices"
+          }
+        },
+        {
+          "id": "add_my_devices",
+          "template": "add_devices"
+        }
+      ],
+      "settings": [
+        {
+          "id": "update_interval",
+          "type": "number",
+          "label": {
+            "en": "Polling interval in seconds (default 5s)"
+          },
+          "hint": {
+            "en": "Set the interval for data updates from the Sunberry."
+          },
+          "value": 5,
+          "min": 1
+        },
+        {
+          "id": "force_charging_limit",
+          "type": "number",
+          "label": {
+            "en": "Force Charging Limit (W)"
+          },
+          "hint": {
+            "en": "Set the power limit for force charging mode."
+          },
+          "value": 5000,
+          "min": 100
+        }
+      ]
+    }
+  ],
+  "capabilities": {
+    "block_battery_discharge": {
+      "type": "boolean",
+      "title": {
+        "en": "Blocking Battery Discharge"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": false,
+      "uiComponent": "toggle",
+      "titleTrue": {
+        "en": "Battery discharging blocked"
+      },
+      "titleFalse": {
+        "en": "Battery is discharing normally"
+      },
+      "icon": "/assets/images/battery.svg"
+    },
+    "force_charging": {
+      "type": "boolean",
+      "title": {
+        "en": "Force Battery Charging"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": false,
+      "uiComponent": "toggle",
+      "titleTrue": {
+        "en": "Charging"
+      },
+      "titleFalse": {
+        "en": "Not Charging"
+      },
+      "icon": "/assets/images/battery.svg"
+    },
+    "measure_L1": {
+      "type": "number",
+      "title": {
+        "en": "Phase 1 Power (W)"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/images/power.svg",
+      "units": {
+        "en": "W"
+      },
+      "decimals": 0,
+      "min": 0
+    },
+    "measure_L2": {
+      "type": "number",
+      "title": {
+        "en": "Phase 2 Power (W)"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/images/power.svg",
+      "units": {
+        "en": "W"
+      },
+      "decimals": 0,
+      "min": 0
+    },
+    "measure_L3": {
+      "type": "number",
+      "title": {
+        "en": "Phase 3 Power (W)"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/images/power.svg",
+      "units": {
+        "en": "W"
+      },
+      "decimals": 0,
+      "min": 0
+    },
+    "measure_total": {
+      "type": "number",
+      "title": {
+        "en": "Total Power (W)"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/images/power.svg",
+      "units": {
+        "en": "W"
+      },
+      "decimals": 0,
+      "min": 0
+    }
+  }
+}
