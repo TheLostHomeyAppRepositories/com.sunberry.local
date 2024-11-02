@@ -1,0 +1,104 @@
+<script type="application/javascript">
+    console.log("input_ip.html loaded");
+
+    Homey.setTitle("Connecting to Sunberry");
+    console.log("Title set");
+
+    Homey.emit("getSettings").then(function (settings) {
+        console.log("getSettings response:", settings);
+        if (settings && settings.ip_address) {
+            document.getElementById('ip_address').value = settings.ip_address;
+            console.log("IP Address set to:", settings.ip_address);
+        } else {
+            console.log("No settings found, using default values");
+            document.getElementById('ip_address').value = "sunberry.local";
+        }
+    }).catch(function (error) {
+        console.error("Error during getSettings:", error);
+    });
+
+    // Funkce pro změnu nastavení s debounce
+    let debounceTimeout;
+    function settingsChanged() {
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(() => {
+            const value = {
+                "ip_address": document.getElementById('ip_address').value
+            };
+            console.log("Settings changed (debounced):", value);
+
+            Homey.emit("settingsChanged", value).then(function (result) {
+                console.log("settingsChanged response:", result);
+            }).catch(function (error) {
+                console.error("Error during settingsChanged:", error);
+            });
+        }, 500); // Nastavení debounce na 500ms
+    }
+
+    function check() {
+        let value = {
+            "ip_address": document.getElementById('ip_address').value
+        };
+        console.log("Check initiated with value:", value);
+
+        Homey.emit("check", value).then(function (result) {
+            console.log("Check response:", result);
+
+            if (result && result.success) {
+                Homey.alert("Připojení k Sunberry bylo úspěšné!");
+                Homey.nextView();
+            } else {
+                Homey.alert("Nepodařilo se připojit k Sunberry: " + (result.error || "Neznámá chyba"));
+            }
+        }).catch(function (error) {
+            console.error("Error during check:", error);
+            Homey.alert("Došlo k chybě při kontrole připojení: " + error);
+        });
+    }
+</script>
+
+<style type="text/css">
+    .homey-form-group {
+        margin-bottom: 1rem;
+    }
+
+    .homey-form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    .homey-form-input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    .homey-button-primary-full {
+        margin-top: 1rem;
+        width: 100%;
+    }
+</style>
+
+<header class="homey-header">
+    <h1 class="homey-title">Connecting Sunberry</h1>
+    <p class="homey-subtitle">Enter IP address or host name of your Sunberry device</p>
+</header>
+
+<div class="homey-form">
+    <div class="homey-form-group">
+        <label class="homey-form-label" for="ip_address">IP address</label>
+        <input class="homey-form-input" type="text" id="ip_address" 
+               placeholder="sunberry.local" 
+               value="" 
+               oninput="settingsChanged()" />
+        <small>Default is sunberry.local</small>
+    </div>
+
+    <button class="homey-button-primary-full" 
+            id="check" 
+            onclick="check()">
+        Check connection
+    </button>
+</div>

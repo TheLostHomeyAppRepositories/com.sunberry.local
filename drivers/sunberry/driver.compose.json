@@ -7,6 +7,7 @@
   "capabilities": [
     "force_charging",
     "block_battery_discharge",
+    
     "measure_L1",
     "measure_L2",
     "measure_L3",
@@ -104,10 +105,20 @@
   },
   "pair": [
     {
-      "id": "list_my_devices",
+      "id": "pair",
+      "navigation": {
+        "next": "list_devices"
+      }
+    },
+    {
+      "id": "list_devices",
       "template": "list_devices",
       "navigation": {
-        "next": "add_my_devices"
+        "next": "add_my_devices",
+        "prev": "pair"
+      },
+      "options": {
+        "singular": true
       }
     },
     {

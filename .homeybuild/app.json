@@ -26,9 +26,16 @@
     "name": "Jiri Pech",
     "email": "jiri.pech@centrum.cz"
   },
+  "contributing": {
+    "donate": {
+      "paypal": {
+        "username": "pechjiri"
+      }
+    }
+  },
   "brandColor": "#de0618",
   "source": "https://github.com/PechJiri/sunberry",
-  "homepage": "https://spotovaelektrina.cz/",
+  "homepage": "https://www.solidsun.cz/sunberry",
   "support": "mailto:jiri.pech@centrum.cz",
   "homeyCommunityTopicId": 0,
   "flow": {
@@ -197,10 +204,20 @@
       },
       "pair": [
         {
-          "id": "list_my_devices",
+          "id": "pair",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
+          "id": "list_devices",
           "template": "list_devices",
           "navigation": {
-            "next": "add_my_devices"
+            "next": "add_my_devices",
+            "prev": "pair"
+          },
+          "options": {
+            "singular": true
           }
         },
         {
@@ -220,6 +237,19 @@
           },
           "value": 5,
           "min": 1
+        },
+        {
+          "id": "ip_address",
+          "type": "text",
+          "label": {
+            "en": "IP Address",
+            "cs": "IP adresa"
+          },
+          "value": "sunberry.local",
+          "hint": {
+            "en": "Enter the IP address of your Sunberry device",
+            "cs": "Zadejte IP adresu vašeho Sunberry zařízení"
+          }
         },
         {
           "id": "force_charging_limit",

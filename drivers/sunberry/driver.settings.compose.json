@@ -12,6 +12,19 @@
     "min": 1
   },
   {
+    "id": "ip_address",
+    "type": "text",
+    "label": {
+      "en": "IP Address",
+      "cs": "IP adresa"
+    },
+    "value": "sunberry.local",
+    "hint": {
+      "en": "Enter the IP address of your Sunberry device",
+      "cs": "Zadejte IP adresu vašeho Sunberry zařízení"
+    }
+  },
+  {
     "id": "force_charging_limit",
     "type": "number",
     "label": {
