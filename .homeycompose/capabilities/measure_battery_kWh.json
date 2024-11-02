@@ -1,0 +1,17 @@
+{
+    "type": "number",
+    "title": {
+      "en": "Actual Battery (kWh)"
+    },
+    "getable": true,
+    "setable": false,
+    "insights": true,
+    "uiComponent": "sensor",
+    "icon": "/assets/images/battery.svg",
+    "units": {
+      "en": "kWh"
+    },
+    "decimals": 2,
+    "min": 0
+  }
+  

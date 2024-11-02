@@ -1,0 +1,18 @@
+{
+    "type": "number",
+    "title": {
+      "en": "Actual Battery (%)"
+    },
+    "getable": true,
+    "setable": false,
+    "insights": true,
+    "uiComponent": "sensor",
+    "icon": "/assets/images/battery.svg",
+    "units": {
+      "en": "%"
+    },
+    "decimals": 1,
+    "min": 0,
+    "max": 100
+  }
+  

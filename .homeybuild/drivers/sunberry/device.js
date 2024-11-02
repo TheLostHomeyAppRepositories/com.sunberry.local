@@ -4,6 +4,7 @@ const Homey = require('homey');
 const {
   setBaseUrl,
   getGridValues,
+  getBatteryValues,
   enableForceCharging,
   disableForceCharging,
   enableBlockBatteryDischarge,
@@ -16,7 +17,10 @@ class SunberryDevice extends Homey.Device {
     measure_L1: 0,
     measure_L2: 0,
     measure_L3: 0,
-    measure_total: 0
+    measure_total: 0,
+    measure_battery_kWh: 0,
+    measure_battery_percent: 0,
+    remaining_kWh_to_full: 0
   };
 
   async onInit() {
@@ -60,7 +64,10 @@ class SunberryDevice extends Homey.Device {
 
     // Nastavení intervalu pro získávání dat
     this.startDataFetchInterval(updateInterval);
-    this.log('Interval pro získávání dat byl spuštěn');
+    this.log('Interval pro získávání dat site byl spuštěn');
+
+    this.startBatteryFetchInterval(updateInterval);
+    this.log('Interval pro získávání dat baterie byl spuštěn');
 
     // Nastavení zařízení jako dostupného
     this.setAvailable();
@@ -178,6 +185,73 @@ class SunberryDevice extends Homey.Device {
 
     this.log('Interval pro načítání dat byl úspěšně spuštěn');
   }
+
+  async fetchAndUpdateBatteryValues() {
+    try {
+      this.log('Začínám načítat hodnoty baterie z API...');
+      const values = await getBatteryValues();
+      
+      if (!values) {
+        throw new Error('Žádné hodnoty baterie nebyly přijaty z API');
+      }
+  
+      this.log('Hodnoty baterie přijaté z API:', values);
+  
+      // Nastavíme hodnotu measure_battery_kWh, pokud je platná
+      if (typeof values.actual_kWh === 'number') {
+        this.log(`Aktualizuji measure_battery_kWh: ${values.actual_kWh} kWh`);
+        this.#cachedValues.measure_battery_kWh = values.actual_kWh;
+        await this.setCapabilityValue('measure_battery_kWh', values.actual_kWh);
+      } else {
+        this.log('Hodnota actual_kWh je neplatná, neaktualizováno');
+      }
+  
+      // Nastavíme hodnotu measure_battery_percent, pokud je platná
+      if (typeof values.actual_percent === 'number') {
+        this.log(`Aktualizuji measure_battery_percent: ${values.actual_percent}%`);
+        this.#cachedValues.measure_battery_percent = values.actual_percent;
+        await this.setCapabilityValue('measure_battery_percent', values.actual_percent);
+  
+      // Výpočet zbývající kapacity do plného nabití
+      const fullCapacity = values.actual_kWh / (values.actual_percent / 100);
+      const remaining_kWh = (fullCapacity - values.actual_kWh).toFixed(2);
+
+      this.log(`Vypočítaná remaining_kWh_to_full: ${remaining_kWh} kWh`);
+
+      this.#cachedValues.remaining_kWh_to_full = parseFloat(remaining_kWh);
+      await this.setCapabilityValue('remaining_kWh_to_full', parseFloat(remaining_kWh));
+      } else {
+      this.log('Hodnota actual_percent je neplatná, neaktualizováno');
+      }
+  
+      // Uložení aktuálních hodnot do cache
+      await this.setStoreValue('cachedBatteryValues', this.#cachedValues);
+      this.log('Hodnoty baterie byly úspěšně uloženy do cache:', this.#cachedValues);
+  
+    } catch (error) {
+      this.error('Chyba při načítání hodnot baterie:', error);
+    }
+  }  
+
+  startBatteryFetchInterval(interval) {
+    this.log('Spouštím interval pro načítání dat baterie s intervalem', interval, 'sekund');
+  
+    if (this.batteryFetchInterval) {
+      this.log('Ruším existující interval pro načítání dat baterie');
+      this.homey.clearInterval(this.batteryFetchInterval);
+    }
+  
+    const intervalMs = interval * 1000; // Interval v milisekundách
+    this.batteryFetchInterval = this.homey.setInterval(async () => {
+      this.log('Načítám nová data baterie v intervalu');
+      try {
+        await this.fetchAndUpdateBatteryValues();
+        this.log('Data baterie byla úspěšně načtena');
+      } catch (error) {
+        this.error('Chyba při aktualizaci dat baterie v intervalu:', error);
+      }
+    }, intervalMs);
+  }  
 
   async onSettings({ oldSettings, newSettings, changedKeys }) {
     this.log('Nastavení byla změněna:');

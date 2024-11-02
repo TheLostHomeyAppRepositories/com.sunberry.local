@@ -110,7 +110,10 @@
         "measure_L1",
         "measure_L2",
         "measure_L3",
-        "measure_total"
+        "measure_total",
+        "measure_battery_kWh",
+        "measure_battery_percent",
+        "remaining_kWh_to_full"
       ],
       "platforms": [
         "local"
@@ -197,6 +200,55 @@
           "insights": true,
           "units": {
             "en": "W"
+          },
+          "decimals": 2,
+          "min": 0
+        },
+        "measure_battery_kWh": {
+          "type": "number",
+          "title": {
+            "en": "Actual Battery (kWh)"
+          },
+          "getable": true,
+          "setable": false,
+          "insights": true,
+          "uiComponent": "sensor",
+          "icon": "/assets/images/battery.svg",
+          "units": {
+            "en": "kWh"
+          },
+          "decimals": 2,
+          "min": 0
+        },
+        "measure_battery_percent": {
+          "type": "number",
+          "title": {
+            "en": "Actual Battery (%)"
+          },
+          "getable": true,
+          "setable": false,
+          "insights": true,
+          "uiComponent": "sensor",
+          "icon": "/assets/images/battery.svg",
+          "units": {
+            "en": "%"
+          },
+          "decimals": 1,
+          "min": 0,
+          "max": 100
+        },
+        "remaining_kWh_to_full": {
+          "type": "number",
+          "title": {
+            "en": "Remaining kWh to Full"
+          },
+          "getable": true,
+          "setable": false,
+          "insights": true,
+          "uiComponent": "sensor",
+          "icon": "/assets/images/battery.svg",
+          "units": {
+            "en": "kWh"
           },
           "decimals": 2,
           "min": 0
@@ -301,6 +353,39 @@
       },
       "icon": "/assets/images/battery.svg"
     },
+    "measure_battery_kWh": {
+      "type": "number",
+      "title": {
+        "en": "Actual Battery (kWh)"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/images/battery.svg",
+      "units": {
+        "en": "kWh"
+      },
+      "decimals": 2,
+      "min": 0
+    },
+    "measure_battery_percent": {
+      "type": "number",
+      "title": {
+        "en": "Actual Battery (%)"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/images/battery.svg",
+      "units": {
+        "en": "%"
+      },
+      "decimals": 1,
+      "min": 0,
+      "max": 100
+    },
     "measure_L1": {
       "type": "number",
       "title": {
@@ -363,6 +448,22 @@
         "en": "W"
       },
       "decimals": 0,
+      "min": 0
+    },
+    "remaining_kWh_to_full": {
+      "type": "number",
+      "title": {
+        "en": "Remaining kWh to Full"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/images/battery.svg",
+      "units": {
+        "en": "kWh"
+      },
+      "decimals": 2,
       "min": 0
     }
   }

@@ -74,6 +74,33 @@ async function getGridValues() {
   }
 }
 
+async function getBatteryValues() {
+  console.log('Načítám hodnoty baterie z:', `${baseUrl}/battery/values`);
+  try {
+    const response = await fetch(`${baseUrl}/battery/values`);
+    if (!response.ok) throw new Error(`Failed to fetch battery values: ${response.status}`);
+
+    const batteryHtml = await response.text();
+    console.log('Raw API response for battery values:', batteryHtml);
+
+    // Regulární výraz pro kapacitu baterie v "Wh" (např. "7120 Wh")
+    const kWhMatch = batteryHtml.match(/<label[^>]*>\s*(\d+)\s*Wh<\/label>/);
+    // Regulární výraz pro procento nabití (např. "34 %")
+    const percentMatch = batteryHtml.match(/<label[^>]*>\s*(\d+)\s*%\s*<\/label>/);
+
+    // Získané hodnoty převedeme na požadovaný formát
+    const actual_kWh = kWhMatch ? parseInt(kWhMatch[1], 10) / 1000 : null; // Převedeme Wh na kWh
+    const actual_percent = percentMatch ? parseInt(percentMatch[1], 10) : null;
+
+    console.log('Parsed battery values:', { actual_kWh, actual_percent });
+    return { actual_kWh, actual_percent };
+  } catch (error) {
+    console.error("Error fetching battery values:", error);
+    return { actual_kWh: null, actual_percent: null };
+  }
+}
+
+
 async function enableForceCharging(limit) {
   console.log('Volá se enableForceCharging s limitem:', limit); // Ladicí výstup
   
@@ -183,6 +210,7 @@ module.exports = {
   setBaseUrl,
   getBaseUrl,
   getGridValues,
+  getBatteryValues,
   enableForceCharging,
   disableForceCharging,
   enableBlockBatteryDischarge,
