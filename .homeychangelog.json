@@ -4,5 +4,8 @@
   },
   "1.0.1": {
     "en": "Added pairing process, and ability to change IP adress, added battery capabilities"
+  },
+  "1.0.2": {
+    "en": "Added Homey community topic ID"
   }
 }
