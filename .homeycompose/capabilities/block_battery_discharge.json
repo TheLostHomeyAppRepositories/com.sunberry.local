@@ -5,7 +5,13 @@
     },
     "getable": true,
     "setable": true,
-    "insights": false,
+    "insights": true,
+    "insightsTitleTrue": {
+      "en": "Stopping battery discharge"
+    },
+  "insightsTitleFalse": {
+      "en": "Enabling battery discharge"
+    },
     "uiComponent": "toggle",
     "titleTrue": {
       "en": "Battery discharging blocked"

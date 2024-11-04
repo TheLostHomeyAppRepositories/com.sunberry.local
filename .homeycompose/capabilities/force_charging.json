@@ -5,7 +5,13 @@
     },
     "getable": true,
     "setable": true,
-    "insights": false,
+    "insights": true,
+    "insightsTitleTrue": {
+      "en": "Force charging battery"
+    },
+  "insightsTitleFalse": {
+      "en": "Stopped force charging"
+    },
     "uiComponent": "toggle",
     "titleTrue": {
       "en": "Charging"

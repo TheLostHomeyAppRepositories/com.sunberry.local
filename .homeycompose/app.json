@@ -10,7 +10,7 @@
     "en": "Sunberry"
   },
   "description": {
-    "en": "Adds support for sunberry (unipy) device"
+    "en": "Smart Monitoring of Your Photovoltaic Power Plant"
   },
   "category": [
     "energy"
@@ -47,6 +47,7 @@
         "lan",
         "cloud"
       ],
+      "icon": "/assets/icon.svg",
       "capabilities": [
         "force_charging",
         "block_battery_discharge",

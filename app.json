@@ -11,7 +11,7 @@
     "en": "Sunberry"
   },
   "description": {
-    "en": "Adds support for sunberry (unipy) device"
+    "en": "Smart Monitoring of Your Photovoltaic Power Plant"
   },
   "category": [
     "energy"
@@ -326,7 +326,13 @@
       },
       "getable": true,
       "setable": true,
-      "insights": false,
+      "insights": true,
+      "insightsTitleTrue": {
+        "en": "Stopping battery discharge"
+      },
+      "insightsTitleFalse": {
+        "en": "Enabling battery discharge"
+      },
       "uiComponent": "toggle",
       "titleTrue": {
         "en": "Battery discharging blocked"
@@ -343,7 +349,13 @@
       },
       "getable": true,
       "setable": true,
-      "insights": false,
+      "insights": true,
+      "insightsTitleTrue": {
+        "en": "Force charging battery"
+      },
+      "insightsTitleFalse": {
+        "en": "Stopped force charging"
+      },
       "uiComponent": "toggle",
       "titleTrue": {
         "en": "Charging"
