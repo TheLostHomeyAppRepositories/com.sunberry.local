@@ -7,5 +7,8 @@
   },
   "1.0.2": {
     "en": "Added Homey community topic ID"
+  },
+  "1.0.3": {
+    "en": "fixes for certification"
   }
 }
