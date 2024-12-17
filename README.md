@@ -1,3 +1,3 @@
 # Sunberry
 
-Adds support for sunberry (unipy) device
+Smart monitoring of your PV power plant

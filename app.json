@@ -119,8 +119,7 @@
         "local"
       ],
       "connectivity": [
-        "lan",
-        "cloud"
+        "lan"
       ],
       "images": {
         "small": "/drivers/sunberry/assets/images/small.png",
@@ -282,25 +281,23 @@
           "id": "update_interval",
           "type": "number",
           "label": {
-            "en": "Polling interval in seconds (default 5s)"
+            "en": "Polling interval in seconds (default 10s, minimum 5s)"
           },
           "hint": {
             "en": "Set the interval for data updates from the Sunberry."
           },
-          "value": 5,
-          "min": 1
+          "value": 10,
+          "min": 5
         },
         {
           "id": "ip_address",
           "type": "text",
           "label": {
-            "en": "IP Address",
-            "cs": "IP adresa"
+            "en": "IP Address"
           },
           "value": "sunberry.local",
           "hint": {
-            "en": "Enter the IP address of your Sunberry device",
-            "cs": "Zadejte IP adresu vašeho Sunberry zařízení"
+            "en": "Enter the IP address of your Sunberry device"
           }
         },
         {
@@ -313,7 +310,19 @@
             "en": "Set the power limit for force charging mode."
           },
           "value": 5000,
-          "min": 100
+          "min": 100,
+          "highlight": true
+        },
+        {
+          "id": "enable_debug_logs",
+          "type": "checkbox",
+          "label": {
+            "en": "Enable Debug Logs"
+          },
+          "hint": {
+            "en": "Enable or disable detailed debug logs for troubleshooting."
+          },
+          "value": false
         }
       ]
     }
@@ -333,7 +342,7 @@
       "insightsTitleFalse": {
         "en": "Enabling battery discharge"
       },
-      "uiComponent": "toggle",
+      "uiComponent": "button",
       "titleTrue": {
         "en": "Battery discharging blocked"
       },
@@ -356,7 +365,7 @@
       "insightsTitleFalse": {
         "en": "Stopped force charging"
       },
-      "uiComponent": "toggle",
+      "uiComponent": "button",
       "titleTrue": {
         "en": "Charging"
       },

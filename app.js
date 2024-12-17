@@ -1,56 +1,51 @@
 'use strict';
 
 const Homey = require('homey');
+const Logger = require('./lib/Logger');
 
 class SunberryApp extends Homey.App {
 
-  /**
-   * onInit is called when the app is initialized.
-   * This is the entry point for your app, where you can set up 
-   * anything that needs to be initialized when the app starts.
-   */
-  async onInit() {
-    this.log('SunberryApp has been initialized');
+async onInit() {
+    // Kontrola existence globálního loggeru
+    if (!this.homey.appLogger) {
+        this.logger = new Logger(this.homey, 'SunberryApp');
+        this.logger.setEnabled(true);
 
-    // Initialize global listeners or services
+        // Nastavení centrální instance loggeru
+        this.homey.appLogger = this.logger;
+        this.logger.info('SunberryApp has been initialized');
+    } else {
+        this.logger = this.homey.appLogger;
+        this.logger.info('Globální logger již existuje, používám existující instanci.');
+    }
+
     this.initializeGlobalListeners();
-  }
+}
 
-  /**
-   * Initializes any global event listeners or services that the app needs.
-   * This method can be used to set up any recurring tasks, listeners, 
-   * or external integrations that should be active throughout the app's lifecycle.
-   */
   initializeGlobalListeners() {
-    // Example: Listening for a global event
-    // this.homey.on('someEvent', this.handleSomeEvent.bind(this));
+    this.logger.info('Initializing global listeners');
 
-    // Example: Set up a recurring task
-    // this.homey.setInterval(this.someRecurringTask.bind(this), 10000); // Run every 10 seconds
+    // Example: Listening for uncaught exceptions
+    this.homey.on('uncaughtException', (error) => {
+      this.logger.error('Uncaught exception occurred:', error);
+    });
 
-    this.log('Global listeners have been initialized');
+    this.logger.info('Global listeners have been initialized');
   }
 
-  /**
-   * Handles a specific event that the app is listening for.
-   * This is just an example of how you might structure event handling.
-   */
   async handleSomeEvent(data) {
-    this.log('Handling some event with data:', data);
-
-    // Process the event data here
+    this.logger.info('Handling some event', { data });
+    // Add event handling logic here
   }
 
-  /**
-   * Example of a recurring task that could be set up in initializeGlobalListeners.
-   * This is just an example method to illustrate how you might set up recurring logic.
-   */
   async someRecurringTask() {
-    this.log('Running some recurring task');
-
-    // Add logic for the recurring task here
+    this.logger.info('Running a recurring task');
+    // Add recurring task logic here
   }
 
+  getLogger() {
+    return this.homey.appLogger;
+  }
 }
 
 module.exports = SunberryApp;

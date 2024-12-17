@@ -12,7 +12,7 @@
   "insightsTitleFalse": {
       "en": "Enabling battery discharge"
     },
-    "uiComponent": "toggle",
+    "uiComponent": "button",
     "titleTrue": {
       "en": "Battery discharging blocked"
     },

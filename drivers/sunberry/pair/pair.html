@@ -17,13 +17,27 @@
         console.error("Error during getSettings:", error);
     });
 
-    // Funkce pro změnu nastavení s debounce
+    // Function to validate IP address or sunberry.local
+    function isValidIPAddress(ip) {
+        const ipPattern = /^(sunberry\.local|((25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})\.){3}(25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2}))$/;
+        return ipPattern.test(ip);
+    }
+
+    // Function for handling settings change with debounce and validation
     let debounceTimeout;
     function settingsChanged() {
         clearTimeout(debounceTimeout);
         debounceTimeout = setTimeout(() => {
+            const ip = document.getElementById('ip_address').value.trim();
+
+            if (!isValidIPAddress(ip)) {
+                Homey.alert("The entered IP address or hostname is not valid. Use the format sunberry.local or a valid IP address.");
+                console.warn("Invalid IP address entered:", ip);
+                return;
+            }
+
             const value = {
-                "ip_address": document.getElementById('ip_address').value
+                "ip_address": ip
             };
             console.log("Settings changed (debounced):", value);
 
@@ -32,27 +46,34 @@
             }).catch(function (error) {
                 console.error("Error during settingsChanged:", error);
             });
-        }, 500); // Nastavení debounce na 500ms
+        }, 500); // Debounce set to 500ms
     }
 
+    // Function to check connection with validation
     function check() {
-        let value = {
-            "ip_address": document.getElementById('ip_address').value
-        };
+        const ip = document.getElementById('ip_address').value.trim();
+
+        if (!isValidIPAddress(ip)) {
+            Homey.alert("The entered IP address or hostname is not valid. Use the format sunberry.local or a valid IP address.");
+            console.warn("Invalid IP address entered for check:", ip);
+            return;
+        }
+
+        const value = { "ip_address": ip };
         console.log("Check initiated with value:", value);
 
         Homey.emit("check", value).then(function (result) {
             console.log("Check response:", result);
 
             if (result && result.success) {
-                Homey.alert("Připojení k Sunberry bylo úspěšné!");
+                Homey.alert("Connection to Sunberry was successful!");
                 Homey.nextView();
             } else {
-                Homey.alert("Nepodařilo se připojit k Sunberry: " + (result.error || "Neznámá chyba"));
+                Homey.alert("Failed to connect to Sunberry: " + (result.error || "Unknown error"));
             }
         }).catch(function (error) {
             console.error("Error during check:", error);
-            Homey.alert("Došlo k chybě při kontrole připojení: " + error);
+            Homey.alert("An error occurred while checking the connection: " + error);
         });
     }
 </script>
@@ -83,7 +104,7 @@
 
 <header class="homey-header">
     <h1 class="homey-title">Connecting Sunberry</h1>
-    <p class="homey-subtitle">Enter IP address or host name of your Sunberry device</p>
+    <p class="homey-subtitle">Enter the IP address or hostname of your Sunberry device</p>
 </header>
 
 <div class="homey-form">

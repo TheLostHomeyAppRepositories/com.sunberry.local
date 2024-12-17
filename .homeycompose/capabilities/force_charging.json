@@ -12,7 +12,7 @@
   "insightsTitleFalse": {
       "en": "Stopped force charging"
     },
-    "uiComponent": "toggle",
+    "uiComponent": "button",
     "titleTrue": {
       "en": "Charging"
     },
