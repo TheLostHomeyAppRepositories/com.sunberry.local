@@ -1,77 +1,219 @@
 'use strict';
 
 const Homey = require('homey');
+const Logger = require('../../lib/Logger');
+const sunberryAPI = require('./api');
+const axios = require('axios');
 
+// Konstanty pro nastavení
+const SETTINGS = {
+   DEFAULT_IP: 'sunberry.local',
+   CONNECTION_TIMEOUT: 3000,
+   DEFAULT_DEVICE_NAME: 'Sunberry Zařízení'
+};
+
+// Konstanty pro API endpointy
+const API_ENDPOINTS = {
+   GRID_VALUES: '/grid/values'
+};
+
+/**
+* Driver třída pro Sunberry zařízení
+*/
 class SunberryDriver extends Homey.Driver {
+   /**
+    * Inicializace driveru
+    */
+   async onInit() {
+       try {
+           // Inicializace loggeru
+           if (!this.homey.appLogger) {
+               this.logger = new Logger(this.homey, 'SunberryDriver');
+               this.homey.appLogger = this.logger;
+           } else {
+               this.logger = this.homey.appLogger;
+           }
+           
+           // Inicializace API
+           await sunberryAPI.initializeLogger(this.homey);
+           
+           this.logger.info('SunberryDriver byl úspěšně inicializován');
+       } catch (error) {
+           console.error('Chyba při inicializaci SunberryDriver:', error);
+           throw error;
+       }
+   }
 
-  async onInit() {
-    // Použití globálního loggeru
-    this.logger = this.homey.appLogger || new Logger(this.homey, 'FallbackLogger');
-    this.logger.info('SunberryDriver byl inicializován');
-  }
+   /**
+    * Párovací proces
+    * @param {Object} session - Párovací session
+    */
+   async onPair(session) {
+       this.logger.info('Zahájena párovací relace');
 
-  async onPair(session) {
-    this.logger.info('Zahájena párovací relace');
+       // Data uložená během párovací relace
+       const pairingData = {
+           ip_address: null
+       };
 
-    const pairingData = {
-      ip_address: null
-    };
+       try {
+           // Handler pro načtení nastavení
+           session.setHandler('getSettings', async () => {
+               this.logger.info('getSettings voláno');
+               return { 
+                   ip_address: pairingData.ip_address || SETTINGS.DEFAULT_IP 
+               };
+           });
 
-    session.setHandler('getSettings', async () => {
-      this.logger.info('getSettings voláno');
-      const ip_address = pairingData.ip_address || 'sunberry.local';
-      return {
-        ip_address: ip_address
-      };
-    });
+           // Handler pro změnu nastavení
+           session.setHandler('settingsChanged', async (settings) => {
+               try {
+                   this.validateIPAddress(settings.ip_address);
+                   
+                   this.logger.info('settingsChanged voláno s:', settings);
+                   pairingData.ip_address = settings.ip_address;
+                   this.logger.info('Aktualizována IP adresa v pairingData na:', settings.ip_address);
+                   
+                   return { success: true };
+               } catch (error) {
+                   this.logger.error('Chyba při změně nastavení:', error);
+                   return { success: false, error: error.message };
+               }
+           });
 
-    session.setHandler('settingsChanged', async (settings) => {
-      this.logger.info('settingsChanged voláno s:', settings);
-      pairingData.ip_address = settings.ip_address;
-      this.logger.info('Aktualizována ip_address v pairingData na:', settings.ip_address);
-      return { success: true };
-    });
+           // Handler pro kontrolu spojení
+           session.setHandler('check', async (settings) => {
+               try {
+                   const ip = settings.ip_address;
+                   this.validateIPAddress(ip);
 
-    session.setHandler('check', async (settings) => {
-      const ip = settings.ip_address;
-      try {
-        this.logger.info('Kontrola spojení na IP:', ip);
-        const response = await axios.get(`http://${ip}/grid/values`, { timeout: 3000 });
-        this.logger.info('Spojení úspěšné, odpověď:', response.data);
-        pairingData.ip_address = ip;
-        return { success: true };
-      } catch (error) {
-        this.logger.error('Kontrola spojení selhala s chybou:', error.message);
-        return { success: false, error: `Chyba připojení: ${error.message}` };
-      }
-    });
+                   this.logger.info('Kontrola spojení na IP:', ip);
+                   await this.testConnection(ip);
+                   
+                   pairingData.ip_address = ip;
+                   sunberryAPI.setBaseUrl(ip);
+                   
+                   return { success: true };
+               } catch (error) {
+                   this.logger.error('Kontrola spojení selhala:', error);
+                   return { 
+                       success: false, 
+                       error: `Chyba připojení: ${error.message}` 
+                   };
+               }
+           });
 
-    session.setHandler('list_devices', async () => {
-      this.logger.info('Handler list_devices byl volán');
+           // Handler pro získání seznamu zařízení
+           session.setHandler('list_devices', async () => {
+               try {
+                   const ip_address = pairingData.ip_address;
+                   if (!ip_address) {
+                       throw new Error('IP adresa není nastavena');
+                   }
 
-      const ip_address = pairingData.ip_address;
-      if (!ip_address) {
-        this.logger.error('Chyba: IP adresa není nastavena v pairingData.');
-        return [];
-      }
+                   const device = await this.createDeviceObject(ip_address);
+                   this.logger.info('Vytvořeno zařízení:', device);
+                   
+                   return [device];
+               } catch (error) {
+                   this.logger.error('Chyba při vytváření seznamu zařízení:', error);
+                   return [];
+               }
+           });
 
-      try {
-        const device = {
-          name: 'Sunberry Zařízení',
-          data: { id: ip_address },
-          settings: {
-            ip_address: ip_address
-          }
-        };
+       } catch (error) {
+           this.logger.error('Kritická chyba během párování:', error);
+           throw error;
+       }
+   }
 
-        this.logger.info('Zařízení k přidání s IP adresou:', ip_address);
-        return [device];
-      } catch (error) {
-        this.logger.error('Chyba při vytváření seznamu zařízení:', error);
-        return [];
-      }
-    });
-  }
+   /**
+    * Validace IP adresy
+    * @private
+    */
+   validateIPAddress(ip) {
+       if (!ip) {
+           throw new Error('IP adresa je prázdná');
+       }
+
+       if (ip !== SETTINGS.DEFAULT_IP) {
+           const ipPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+           if (!ipPattern.test(ip)) {
+               throw new Error('Neplatný formát IP adresy');
+           }
+       }
+   }
+
+   /**
+    * Test připojení k zařízení
+    * @private
+    */
+   async testConnection(ip) {
+    const maxRetries = 3;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+        try {
+            this.logger.debug(`Pokus ${attempt + 1}/${maxRetries} - Test připojení k:`, ip);
+            const url = `http://${ip}${API_ENDPOINTS.GRID_VALUES}`;
+
+            const response = await axios({
+                method: 'get',
+                url,
+                timeout: 10000,
+                headers: {
+                    'Cache-Control': 'no-cache, no-store',
+                    'Pragma': 'no-cache',
+                    'User-Agent': 'HomeyApp/1.0',
+                    'Accept': '*/*'
+                },
+                validateStatus: null, // akceptuje jakýkoliv status kód
+                maxRedirects: 0
+            });
+
+            if (response.status !== 200) {
+                throw new Error(`Server odpověděl s chybou ${response.status}`);
+            }
+
+            return response.data;
+        } catch (error) {
+            this.logger.warn(`Test připojení - pokus ${attempt + 1} selhal:`, {
+                message: error.message,
+                code: error.code,
+                response: error.response?.status,
+                config: error.config
+            });
+
+            if (attempt === maxRetries - 1) {
+                this.logger.error('Všechny pokusy o připojení selhaly:', error);
+                throw new Error(`Nelze se připojit k zařízení: ${error.message}`);
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+            attempt++;
+            }
+        }
+    }
+
+   /**
+    * Vytvoření objektu zařízení
+    * @private
+    */
+   async createDeviceObject(ip_address) {
+       return {
+           name: SETTINGS.DEFAULT_DEVICE_NAME,
+           data: { 
+               id: ip_address 
+           },
+           settings: { 
+               ip_address,
+               // Přidání výchozích nastavení ze souboru driver.settings.compose.json
+               update_interval: 10,
+               force_charging_limit: 5000,
+               enable_debug_logs: false
+           }
+       };
+   }
 }
 
 module.exports = SunberryDriver;

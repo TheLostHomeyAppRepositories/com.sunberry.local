@@ -1,196 +1,460 @@
 'use strict';
 
 const Homey = require('homey');
+const Logger = require('../../lib/Logger');
 const FlowCardManager = require('./FlowCardManager');
-const {
-  initializeLogger,
-  setBaseUrl,
-  getGridValues,
-  getBatteryValues,
-  enableForceCharging,
-  disableForceCharging,
-  enableBlockBatteryDischarge,
-  disableBlockBatteryDischarge
-} = require('./api');
+const sunberryAPI = require('./api'); 
+
+// Konstanty pro capabilities
+const CAPABILITIES = {
+    MEASURE_L1: 'measure_L1',
+    MEASURE_L2: 'measure_L2',
+    MEASURE_L3: 'measure_L3',
+    MEASURE_TOTAL: 'measure_total',
+    MEASURE_BATTERY_KWH: 'measure_battery_kWh',
+    MEASURE_BATTERY_PERCENT: 'measure_battery_percent',
+    REMAINING_KWH_TO_FULL: 'remaining_kWh_to_full',
+    BATTERY_MAX_CHARGING_POWER: 'battery_max_charging_power'
+};
+
+// Konstanty pro nastavení
+const SETTINGS = {
+    DEFAULT_UPDATE_INTERVAL: 10,
+    MIN_UPDATE_INTERVAL: 5,
+    DEFAULT_CHARGING_LIMIT: 5000
+};
 
 class SunberryDevice extends Homey.Device {
+    /**
+     * Výchozí hodnoty pro metriky
+     */
+    #cachedValues = {
+        [CAPABILITIES.MEASURE_L1]: 0,
+        [CAPABILITIES.MEASURE_L2]: 0,
+        [CAPABILITIES.MEASURE_L3]: 0,
+        [CAPABILITIES.MEASURE_TOTAL]: 0,
+        [CAPABILITIES.MEASURE_BATTERY_KWH]: 0,
+        [CAPABILITIES.MEASURE_BATTERY_PERCENT]: 0,
+        [CAPABILITIES.REMAINING_KWH_TO_FULL]: 0,
+        [CAPABILITIES.BATTERY_MAX_CHARGING_POWER]: 0
+    };
 
-  #cachedValues = {
-    measure_L1: 0,
-    measure_L2: 0,
-    measure_L3: 0,
-    measure_total: 0,
-    measure_battery_kWh: 0,
-    measure_battery_percent: 0,
-    remaining_kWh_to_full: 0
-  };
+    /**
+     * Inicializace zařízení
+     */
+    async onInit() {
+        try {
+            await this.initializeLogger();
+            await this.initializeCapabilities();
+            await this.initializeFlowCards();
+            await this.initializeAPI();
+            await this.loadCachedValues();
+            await this.startDataPolling();
+            await this.registerCapabilityListeners();
 
-  async onInit() {
-    // Inicializace loggeru s kontrolou globální instance
-    if (!this.homey.appLogger) {
-        this.logger = new Logger(this.homey, 'FallbackLogger');
-        this.homey.appLogger = this.logger; // Nastavení globálního loggeru
-        this.logger.info('Fallback logger byl inicializován jako globální logger');
-    } else {
-        this.logger = this.homey.appLogger;
-        this.logger.info('Používám globální logger z aplikace');
+            await this.setAvailable();
+            this.logger.info('SunberryDevice byl úspěšně inicializován');
+        } catch (error) {
+            this.logger.error('Chyba při inicializaci zařízení:', error);
+            await this.setUnavailable(error.message);
+        }
     }
 
-    // Zavolej inicializaci loggeru pro API
-    initializeLogger(this.homey);
+    /**
+     * Inicializace loggeru
+     */
+    async initializeLogger() {
+        if (!this.homey.appLogger) {
+            this.logger = new Logger(this.homey, 'SunberryDevice');
+            this.homey.appLogger = this.logger;
+        } else {
+            this.logger = this.homey.appLogger;
+        }
 
-    // Nastavení zapnutí/vypnutí debug logů
-    const enableDebugLogs = this.getSetting('enable_debug_logs');
-    this.logger.setEnabled(enableDebugLogs);
-
-    this.logger.info('SunberryDevice byl inicializován');
-
-    // Inicializace Flow karet
-    this.flowCardManager = new FlowCardManager(this.homey, this, this.logger);
-    await this.flowCardManager.initialize();
-
-    // Načteme IP adresu ze settings zařízení
-    this.ipAddress = this.getSetting('ip_address');
-    if (this.ipAddress) {
-      setBaseUrl(this.ipAddress); // Nastav API base URL
-      this.logger.info('Používá se IP adresa:', { ipAddress: this.ipAddress });
-    } else {
-      this.logger.warn('IP adresa není nastavena, používá se výchozí sunberry.local');
+        const enableDebugLogs = this.getSetting('enable_debug_logs');
+        this.logger.setEnabled(enableDebugLogs);
+        this.logger.info('Logger byl inicializován');
     }
 
-    // Načtení uložených hodnot, pokud existují
-    const storedValues = await this.getStoreValue('cachedMeasurements');
-    if (storedValues) {
-      this.logger.info('Načítám uložené hodnoty:', storedValues);
-      this.#cachedValues = storedValues;
-      await this.setInitialValues();
-    } else {
-      this.logger.info('Nenalezeny žádné uložené hodnoty, používají se výchozí');
-    }
-
-    // Nastavení intervalu aktualizace
-    const updateInterval = this.getSetting('update_interval') || 10;
-    this.logger.info('Interval aktualizace nastaven na:', { updateInterval });
-
-    try {
-      this.logger.info('Provádím počáteční načtení dat');
-      await this.fetchAndUpdateGridValues();
-    } catch (error) {
-      this.logger.error('Počáteční načtení dat selhalo:', error);
-    }
-
-    // Spuštění intervalů pro získávání dat
-    this.startDataFetchInterval(updateInterval);
-    this.logger.info('Interval pro získávání dat site byl spuštěn');
-
-    this.startBatteryFetchInterval(updateInterval);
-    this.logger.info('Interval pro získávání dat baterie byl spuštěn');
-
-    // Označení zařízení jako dostupné
-    this.setAvailable();
-    this.logger.info('Inicializace zařízení dokončena');
-}
-
-
-  async onSettings({ oldSettings, newSettings, changedKeys }) {
-    this.logger.info('Nastavení byla změněna:', { oldSettings, newSettings, changedKeys });
-
-    if (changedKeys.includes('update_interval')) {
-      const newInterval = newSettings.update_interval;
-      this.logger.info('Interval aktualizace změněn na:', { newInterval });
-      this.startDataFetchInterval(newInterval);
-    }
-
-    if (changedKeys.includes('ip_address')) {
-      this.ipAddress = newSettings.ip_address;
-      setBaseUrl(this.ipAddress);
-      this.logger.info('IP adresa aktualizována na:', { ipAddress: this.ipAddress });
-    }
-
-    if (changedKeys.includes('enable_debug_logs')) {
-      const enableDebugLogs = newSettings.enable_debug_logs;
-      this.logger.setEnabled(enableDebugLogs);
-      this.logger.info(`Debug logy byly ${enableDebugLogs ? 'zapnuty' : 'vypnuty'}`);
-    }
-
-    this.logger.info('Načítám nová data po změně nastavení');
-    await this.fetchAndUpdateGridValues();
-  }
-
-  async fetchAndUpdateGridValues() {
-    try {
-      this.logger.info('Zahajuji načítání hodnot ze zařízení');
-      const values = await getGridValues();
-      if (!values) throw new Error('API nevrátilo žádné hodnoty');
-
-      this.logger.info('Přijaté hodnoty z API:', values);
-      this.#cachedValues = { ...this.#cachedValues, ...values };
-      await this.setStoreValue('cachedMeasurements', this.#cachedValues);
-      this.logger.info('Hodnoty byly úspěšně uloženy do cache');
-    } catch (error) {
-      this.logger.error('Chyba při načítání hodnot:', error);
-    }
-  }
-
-  async setInitialValues() {
-    try {
-        this.logger.info('Nastavuji počáteční hodnoty z cache');
-        for (const [key, value] of Object.entries(this.#cachedValues)) {
-            const capability = `measure_${key}`; // Přidá prefix measure_ k názvu capability
+    /**
+     * Inicializace capabilities
+     */
+    async initializeCapabilities() {
+        const capabilities = Object.values(CAPABILITIES);
+        
+        for (const capability of capabilities) {
             if (this.hasCapability(capability)) {
-                await this.setCapabilityValue(capability, value);
-                this.logger.info(`Capability ${capability} byla nastavena na:`, value);
-            } else {
-                this.logger.warn(`Capability ${capability} není dostupná v zařízení`);
+                await this.setCapabilityOptions(capability, {
+                    title: this.homey.__(`capability.${capability}`),
+                    preventInsights: false
+                });
             }
         }
-        this.logger.info('Počáteční hodnoty byly úspěšně nastaveny');
-    } catch (error) {
-        this.logger.error('Chyba při nastavování počátečních hodnot:', error);
-    }
-}
-
-  startDataFetchInterval(interval) {
-    if (this.dataFetchInterval) this.homey.clearInterval(this.dataFetchInterval);
-    this.dataFetchInterval = this.homey.setInterval(async () => {
-      await this.fetchAndUpdateGridValues();
-    }, interval * 1000);
-  }
-
-  startBatteryFetchInterval(interval) {
-    if (this.batteryFetchInterval) this.homey.clearInterval(this.batteryFetchInterval);
-    this.batteryFetchInterval = this.homey.setInterval(async () => {
-      await this.fetchAndUpdateBatteryValues();
-    }, interval * 1000);
-  }
-
-  async fetchAndUpdateBatteryValues() {
-    try {
-      const values = await getBatteryValues();
-      this.logger.info('Přijaté hodnoty baterie:', values);
-      this.#cachedValues = { ...this.#cachedValues, ...values };
-      await this.setStoreValue('cachedBatteryValues', this.#cachedValues);
-    } catch (error) {
-      this.logger.error('Chyba při načítání hodnot baterie:', error);
-    }
-  }
-
-  async onDeleted() {
-    this.logger.info('Zařízení bylo odstraněno, provádím čištění');
-
-    if (this.dataFetchInterval) {
-      this.logger.info('Ruším interval načítání dat');
-      this.homey.clearInterval(this.dataFetchInterval);
+        this.logger.info('Capabilities byly inicializovány');
     }
 
-    if (this.batteryFetchInterval) {
-      this.logger.info('Ruším interval načítání dat baterie');
-      this.homey.clearInterval(this.batteryFetchInterval);
+    /**
+     * Inicializace Flow karet
+     */
+    async initializeFlowCards() {
+        this.flowCardManager = new FlowCardManager(this.homey, this);
+        await this.flowCardManager.initialize();
+        this.logger.info('Flow karty byly inicializovány');
     }
 
-    this.flowCardManager.destroy();
-    this.logger.info('Čištění bylo dokončeno');
-  }
+    /**
+     * Inicializace API
+     */
+    async initializeAPI() {
+        this.ipAddress = this.getSetting('ip_address');
+        if (!this.ipAddress) {
+            throw new Error('IP adresa není nastavena');
+        }
+
+        await sunberryAPI.setBaseUrl(this.ipAddress);
+        this.logger.info('API bylo inicializováno s IP:', this.ipAddress);
+    }
+
+    /**
+     * Načtení uložených hodnot
+     */
+    async loadCachedValues() {
+        try {
+            const storedValues = await this.getStoreValue('cachedMeasurements');
+            if (storedValues) {
+                this.#cachedValues = { ...this.#cachedValues, ...storedValues };
+                await this.setInitialValues();
+            }
+        } catch (error) {
+            this.logger.error('Chyba při načítání cache:', error);
+        }
+    }
+
+    /**
+     * Spuštění datových intervalů
+     */
+    async startDataPolling() {
+        const interval = Math.max(
+            this.getSetting('update_interval') || SETTINGS.DEFAULT_UPDATE_INTERVAL,
+            SETTINGS.MIN_UPDATE_INTERVAL
+        );
+
+        this.startDataFetchInterval(interval);
+        this.startBatteryFetchInterval(interval);
+        this.logger.info('Datové intervaly byly spuštěny');
+    }
+
+    /**
+     * Nastavení počátečních hodnot
+     */
+    async setInitialValues() {
+        const setCapabilityIfValid = async (capability, value) => {
+            if (this.hasCapability(capability) && this.validateCapabilityValue(capability, value)) {
+                await this.setCapabilityValue(capability, value);
+            }
+        };
+
+        for (const [capability, value] of Object.entries(this.#cachedValues)) {
+            await setCapabilityIfValid(capability, value);
+        }
+    }
+
+    async registerCapabilityListeners() {
+        try {
+            // Listener pro force_charging
+            this.registerCapabilityListener('force_charging', async (value) => {
+                this.logger.info('Změna force_charging na:', value);
+                try {
+                    if (value) {
+                        const limit = this.getSetting('force_charging_limit') || 5000;
+                        await sunberryAPI.enableForceCharging(limit);
+                    } else {
+                        await sunberryAPI.disableForceCharging();
+                    }
+                    return true;
+                } catch (error) {
+                    this.logger.error('Chyba při nastavení force_charging:', error);
+                    throw error;
+                }
+            });
+    
+            // Listener pro block_battery_discharge
+            this.registerCapabilityListener('block_battery_discharge', async (value) => {
+                this.logger.info('Změna block_battery_discharge na:', value);
+                try {
+                    if (value) {
+                        await sunberryAPI.blockBatteryDischarge();
+                    } else {
+                        await sunberryAPI.enableBatteryDischarge();
+                    }
+                    return true;
+                } catch (error) {
+                    this.logger.error('Chyba při nastavení block_battery_discharge:', error);
+                    throw error;
+                }
+            });
+    
+            this.logger.info('Capability listeners byly úspěšně registrovány');
+        } catch (error) {
+            this.logger.error('Chyba při registraci capability listenerů:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Zpracování změn nastavení
+     */
+    async onSettings({ oldSettings, newSettings, changedKeys }) {
+        try {
+            if (changedKeys.includes('update_interval')) {
+                const newInterval = Math.max(
+                    newSettings.update_interval,
+                    SETTINGS.MIN_UPDATE_INTERVAL
+                );
+                await this.startDataPolling(newInterval);
+            }
+
+            if (changedKeys.includes('ip_address')) {
+                await sunberryAPI.setBaseUrl(newSettings.ip_address);
+            }
+
+            if (changedKeys.includes('enable_debug_logs')) {
+                this.logger.setEnabled(newSettings.enable_debug_logs);
+            }
+
+            await this.fetchAndUpdateGridValues();
+        } catch (error) {
+            this.logger.error('Chyba při aktualizaci nastavení:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Interval pro data ze sítě
+     */
+    startDataFetchInterval(interval) {
+        if (this.dataFetchInterval) {
+            this.homey.clearInterval(this.dataFetchInterval);
+        }
+
+        this.dataFetchInterval = this.homey.setInterval(
+            () => this.fetchAndUpdateGridValues().catch(error => 
+                this.logger.error('Chyba v intervalu grid values:', error)
+            ),
+            interval * 1000
+        );
+    }
+
+    /**
+     * Interval pro data z baterie
+     */
+    startBatteryFetchInterval(interval) {
+        if (this.batteryFetchInterval) {
+            this.homey.clearInterval(this.batteryFetchInterval);
+        }
+
+        this.batteryFetchInterval = this.homey.setInterval(
+            () => this.fetchAndUpdateBatteryValues().catch(error => 
+                this.logger.error('Chyba v intervalu battery values:', error)
+            ),
+            interval * 1000
+        );
+    }
+
+    /**
+     * Aktualizace hodnot ze sítě
+     */
+    async fetchAndUpdateGridValues() {
+        try {
+            const values = await sunberryAPI.getGridValues();
+            if (!values) throw new Error('Nepodařilo se získat hodnoty ze sítě');
+
+            const updates = [
+                { capability: CAPABILITIES.MEASURE_L1, value: values.L1 },
+                { capability: CAPABILITIES.MEASURE_L2, value: values.L2 },
+                { capability: CAPABILITIES.MEASURE_L3, value: values.L3 },
+                { capability: CAPABILITIES.MEASURE_TOTAL, value: values.Total }
+            ];
+
+            await this.processUpdates(updates);
+            await this.updateCache('grid', values);
+        } catch (error) {
+            this.logger.error('Chyba při aktualizaci grid values:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Aktualizace hodnot z baterie
+     */
+    async fetchAndUpdateBatteryValues() {
+        try {
+            const values = await sunberryAPI.getBatteryValues();
+            this.logger.debug('Získané hodnoty z API:', values);
+    
+            if (!values) throw new Error('Nepodařilo se získat hodnoty z baterie');
+    
+            // Ověření hodnoty max_charging_power před použitím
+            if (typeof values.max_charging_power !== 'number' || isNaN(values.max_charging_power)) {
+                this.logger.warn('Neplatná hodnota max_charging_power:', values.max_charging_power);
+                return;
+            }
+    
+            // Uložení starých hodnot pro triggery
+            const oldMaxChargingPower = this.getCapabilityValue(CAPABILITIES.BATTERY_MAX_CHARGING_POWER);
+            const oldBatteryLevel = this.getCapabilityValue(CAPABILITIES.MEASURE_BATTERY_PERCENT);
+    
+            // Výpočet zbývající kapacity do plného nabití
+            let remainingKwhToFull = null;
+            if (values.actual_kWh && values.actual_percent) {
+                // Prevence dělení nulou a kontrola platných hodnot
+                if (values.actual_percent > 0 && values.actual_percent <= 100) {
+                    const totalCapacity = values.actual_kWh / (values.actual_percent / 100);
+                    remainingKwhToFull = Math.max(0, totalCapacity - values.actual_kWh);
+                    
+                    this.logger.debug('Výpočet remaining_kWh_to_full:', {
+                        actualKwh: values.actual_kWh,
+                        actualPercent: values.actual_percent,
+                        totalCapacity,
+                        remainingKwhToFull
+                    });
+                }
+            }
+    
+            // Aktualizace všech capability hodnot
+            const updates = [
+                { capability: CAPABILITIES.MEASURE_BATTERY_KWH, value: values.actual_kWh },
+                { capability: CAPABILITIES.MEASURE_BATTERY_PERCENT, value: values.actual_percent },
+                { capability: CAPABILITIES.BATTERY_MAX_CHARGING_POWER, value: values.max_charging_power },
+                { capability: CAPABILITIES.REMAINING_KWH_TO_FULL, value: remainingKwhToFull }
+            ];
+    
+            // Nejdřív aktualizujeme capability
+            await this.processUpdates(updates);
+    
+            // Kontrola změny maximálního nabíjecího výkonu pro trigger
+            if (values.max_charging_power !== oldMaxChargingPower) {
+                this.logger.debug('Spouštím trigger max charging power - hodnota se změnila z', oldMaxChargingPower, 'na', values.max_charging_power);
+                try {
+                    const currentPower = this.getCapabilityValue(CAPABILITIES.BATTERY_MAX_CHARGING_POWER);
+                    await this.homey.flow.getTriggerCard('battery_max_charging_power_changed')
+                        .trigger(this, { power: currentPower });
+                    
+                    this.logger.debug('Trigger battery_max_charging_power_changed úspěšně spuštěn s hodnotou:', currentPower);
+                } catch (triggerError) {
+                    this.logger.error('Chyba při spouštění triggeru battery_max_charging_power_changed:', triggerError);
+                }
+            }
+    
+            // Kontrola změny úrovně baterie pro trigger
+            if (values.actual_percent !== oldBatteryLevel) {
+                this.logger.debug('Spouštím trigger battery level - hodnota se změnila z', oldBatteryLevel, 'na', values.actual_percent);
+                try {
+                    const triggerCard = this.homey.flow.getTriggerCard('battery_level_changed');
+                    await triggerCard.trigger(this, 
+                        { battery_level: values.actual_percent },  // tokens
+                        { battery_level: values.actual_percent }   // state
+                    );
+                    
+                    this.logger.debug('Trigger battery_level_changed úspěšně spuštěn s hodnotou:', values.actual_percent);
+                } catch (triggerError) {
+                    this.logger.error('Chyba při spouštění triggeru battery_level_changed:', triggerError);
+                }
+            }
+    
+            await this.updateCache('battery', {
+                ...values,
+                remaining_kWh_to_full: remainingKwhToFull
+            });
+        } catch (error) {
+            this.logger.error('Chyba při aktualizaci battery values:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Zpracování aktualizací capabilities
+     */
+    async processUpdates(updates) {
+        await Promise.all(updates.map(async update => {
+            try {
+                if (this.validateCapabilityValue(update.capability, update.value)) {
+                    await this.setCapabilityValue(update.capability, update.value);
+                }
+            } catch (error) {
+                this.logger.error(`Chyba při aktualizaci ${update.capability}:`, error);
+            }
+        }));
+    }
+
+    /**
+     * Aktualizace cache
+     */
+    async updateCache(type, values) {
+        try {
+            this.#cachedValues = {
+                ...this.#cachedValues,
+                ...(type === 'grid' ? {
+                    [CAPABILITIES.MEASURE_L1]: values.L1,
+                    [CAPABILITIES.MEASURE_L2]: values.L2,
+                    [CAPABILITIES.MEASURE_L3]: values.L3,
+                    [CAPABILITIES.MEASURE_TOTAL]: values.Total
+                } : {
+                    [CAPABILITIES.MEASURE_BATTERY_KWH]: values.actual_kWh,
+                    [CAPABILITIES.MEASURE_BATTERY_PERCENT]: values.actual_percent,
+                    [CAPABILITIES.BATTERY_MAX_CHARGING_POWER]: values.max_charging_power
+                })
+            };
+    
+            await this.setStoreValue('cachedMeasurements', this.#cachedValues);
+        } catch (error) {
+            this.logger.error('Chyba při aktualizaci cache:', error);
+        }
+    }
+
+    /**
+     * Validace hodnoty capability
+     */
+    validateCapabilityValue(capability, value) {
+        if (typeof value !== 'number' || isNaN(value)) {
+            return false;
+        }
+
+        switch(capability) {
+            case CAPABILITIES.MEASURE_BATTERY_PERCENT:
+                return value >= 0 && value <= 100;
+            case CAPABILITIES.MEASURE_BATTERY_KWH:
+            case CAPABILITIES.REMAINING_KWH_TO_FULL:
+                return value >= 0;
+            case CAPABILITIES.MEASURE_L1:
+            case CAPABILITIES.MEASURE_L2:
+            case CAPABILITIES.MEASURE_L3:
+            case CAPABILITIES.MEASURE_TOTAL:
+            case CAPABILITIES.BATTERY_MAX_CHARGING_POWER:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Čištění při smazání zařízení
+     */
+    async onDeleted() {
+        try {
+            if (this.dataFetchInterval) {
+                this.homey.clearInterval(this.dataFetchInterval);
+            }
+            if (this.batteryFetchInterval) {
+                this.homey.clearInterval(this.batteryFetchInterval);
+            }
+            
+            await this.flowCardManager.destroy();
+            this.logger.info('Zařízení bylo úspěšně odstraněno');
+        } catch (error) {
+            this.logger.error('Chyba při odstraňování zařízení:', error);
+        }
+    }
 }
 
 module.exports = SunberryDevice;

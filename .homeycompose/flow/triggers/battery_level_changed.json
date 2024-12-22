@@ -1,0 +1,51 @@
+{
+    "id": "battery_level_changed",
+    "title": {
+      "en": "Battery level reaches"
+    },
+    "titleFormatted": {
+        "en": "Battery level [[trigger_on]] [[target_level]]%"
+    },
+    "tokens": [
+      {
+        "name": "battery_level",
+        "type": "number",
+        "title": {
+          "en": "Level"
+        }
+      }
+    ],
+    "args": [
+      {
+        "name": "target_level",
+        "type": "number",
+        "title": {
+          "en": "Level"
+        },
+        "min": 0,
+        "max": 100,
+        "step": 1
+      },
+      {
+        "name": "trigger_on",
+        "type": "dropdown",
+        "title": {
+          "en": "Trigger when"
+        },
+        "values": [
+          {
+            "id": "above",
+            "title": {
+              "en": "Goes above"
+            }
+          },
+          {
+            "id": "below",
+            "title": {
+              "en": "Goes below"
+            }
+          }
+        ]
+      }
+    ]
+  }

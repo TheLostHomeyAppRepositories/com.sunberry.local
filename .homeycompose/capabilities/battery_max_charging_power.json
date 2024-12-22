@@ -1,0 +1,15 @@
+{
+    "type": "number",
+    "title": {
+      "en": "Maximum Battery Charging Power"
+    },
+    "getable": true,
+    "setable": false,
+    "insights": true,
+    "uiComponent": "sensor",
+    "icon": "/assets/images/battery_charge.svg",
+    "units": {
+      "en": "W"
+    },
+    "decimals": 0
+  }
