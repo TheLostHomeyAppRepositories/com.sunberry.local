@@ -1,16 +1,16 @@
 {
-    "id": "battery_max_charging_power_changed",
-    "title": {
-      "en": "Maximum battery charging power changed"
-    },
-    "tokens": [
-      {
-        "name": "power",
-        "type": "number",
-        "title": {
-          "en": "Power"
-        },
-        "example": 10000
-      }
-    ]
-  }
+  "id": "battery_max_charging_power_changed",
+  "title": {
+    "en": "Maximum battery charging power changed"
+  },
+  "tokens": [
+    {
+      "name": "power",
+      "type": "number",
+      "title": {
+        "en": "Power"
+      },
+      "example": 10000
+    }
+  ]
+}
