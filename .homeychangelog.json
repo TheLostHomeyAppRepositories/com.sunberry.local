@@ -10,5 +10,8 @@
   },
   "1.0.3": {
     "en": "fixes for certification"
+  },
+  "1.1.0": {
+    "en": "App re-write, added flow cards and capabilities"
   }
 }
