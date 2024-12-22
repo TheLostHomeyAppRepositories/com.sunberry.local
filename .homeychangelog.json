@@ -13,5 +13,8 @@
   },
   "1.1.0": {
     "en": "App re-write, added flow cards and capabilities"
+  },
+  "1.1.1": {
+    "en": "Bugfix"
   }
 }
