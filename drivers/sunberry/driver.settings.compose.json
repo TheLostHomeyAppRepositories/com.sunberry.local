@@ -44,6 +44,6 @@
     "hint": {
       "en": "Enable or disable detailed debug logs for troubleshooting."
     },
-    "value": false
+    "value": true
   }
 ]
