@@ -11,7 +11,8 @@ const FLOW_CARDS = {
     },
     CONDITIONS: {
         IS_FORCE_CHARGING: 'is_force_charging',
-        IS_BATTERY_DISCHARGE_BLOCKED: 'is_battery_discharge_blocked'
+        IS_BATTERY_DISCHARGE_BLOCKED: 'is_battery_discharge_blocked',
+        BATTERY_LEVEL_CHECK: 'battery_level_check'
     },
     ACTIONS: {
         TURN_ON_BATTERY_CHARGING: 'turn_on_battery_charging',
@@ -167,6 +168,45 @@ class FlowCardManager {
                             return blockDischarge === true;
                         } catch (error) {
                             this.logger.error('Chyba při zpracování podmínky is_battery_discharge_blocked:', error);
+                            return false;
+                        }
+                    }
+                },
+                {
+                    id: 'battery_level_check',
+                    handler: async (args) => {
+                        try {
+                            const currentLevel = await this.device.getCapabilityValue('measure_battery_percent');
+                            const targetLevel = args.level;
+                            
+                            this.logger.debug('Kontrola úrovně baterie:', { 
+                                currentLevel, 
+                                targetLevel,
+                                comparison: args.comparison
+                            });
+                
+                            if (typeof currentLevel !== 'number' || isNaN(currentLevel)) {
+                                this.logger.error('Neplatná hodnota aktuální úrovně baterie:', currentLevel);
+                                return false;
+                            }
+                
+                            if (typeof targetLevel !== 'number' || isNaN(targetLevel)) {
+                                this.logger.error('Neplatná cílová hodnota baterie:', targetLevel);
+                                return false;
+                            }
+                
+                            const result = args.comparison === 'below' 
+                                ? currentLevel < targetLevel 
+                                : currentLevel > targetLevel;
+                
+                            this.logger.debug('Výsledek kontroly úrovně baterie:', { 
+                                result,
+                                comparison: args.comparison
+                            });
+                
+                            return result;
+                        } catch (error) {
+                            this.logger.error('Chyba při kontrole úrovně baterie:', error);
                             return false;
                         }
                     }

@@ -296,18 +296,28 @@ class SunberryDevice extends Homey.Device {
             
             if (values.actual_percent !== oldBatteryLevel) {
                 try {
-                    const triggerCard = await this.homey.flow.getDeviceTriggerCard('battery_level_changed');
-                    if (!triggerCard) {
-                        this.logger.error('Trigger karta battery_level_changed nenalezena');
-                    } else {
-                        this.logger.debug('Spouštím trigger s hodnotami:', {
-                            oldLevel: oldBatteryLevel,
-                            newLevel: values.actual_percent
-                        });
+                    // Najdeme všechny registrované battery_level_changed triggery
+                    const triggers = await this.homey.flow.getDeviceTriggerCard('battery_level_changed');
+                    
+                    // Pro každý trigger zkontrolujeme podmínky
+                    const tokens = { battery_level: values.actual_percent };
+                    const state = {};
+            
+                    // Najdeme všechny flow, kde je tento trigger použitý
+                    const flows = await triggers.getArgumentValues();
+                    
+                    for (const flow of flows) {
+                        const { target_level, trigger_on } = flow.args;
                         
-                        await triggerCard.trigger(this, {
-                            battery_level: values.actual_percent
-                        });
+                        // Kontrola překročení hranice
+                        const wasAbove = oldBatteryLevel > target_level;
+                        const isAbove = values.actual_percent > target_level;
+                        
+                        if (trigger_on === 'above' && !wasAbove && isAbove) {
+                            await triggers.trigger(this, tokens, state);
+                        } else if (trigger_on === 'below' && wasAbove && !isAbove) {
+                            await triggers.trigger(this, tokens, state);
+                        }
                     }
                 } catch (error) {
                     this.logger.error('Chyba při spouštění triggeru battery_level_changed:', error);

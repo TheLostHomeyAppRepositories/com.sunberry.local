@@ -1,0 +1,45 @@
+{
+    "id": "battery_level_check",
+    "title": {
+      "en": "Battery level is above/bellow specified level"
+    },
+    "titleFormatted": {
+      "en": "Battery level is [[comparison]] [[level]]%"
+    },
+    "args": [
+      {
+        "name": "comparison",
+        "type": "dropdown",
+        "title": {
+          "en": "Comparison"
+        },
+        "values": [
+          {
+            "id": "below",
+            "title": {
+              "en": "below"
+            }
+          },
+          {
+            "id": "above",
+            "title": {
+              "en": "above"
+            }
+          }
+        ]
+      },
+      {
+        "name": "level",
+        "type": "number",
+        "title": {
+          "en": "Level (%)"
+        },
+        "placeholder": {
+          "en": "Enter battery level"
+        },
+        "min": 0,
+        "max": 100,
+        "step": 1
+      }
+    ]
+  }
