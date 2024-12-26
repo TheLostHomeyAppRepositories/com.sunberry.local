@@ -22,5 +22,8 @@
   },
   "1.1.3": {
     "en": "More code optimalisation"
+  },
+  "1.1.4": {
+    "en": "New condtion card - check battery level"
   }
 }
