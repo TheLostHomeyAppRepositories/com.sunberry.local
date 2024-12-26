@@ -2,6 +2,7 @@
 
 const Logger = require('../../lib/Logger');
 const sunberryAPI = require('./api');
+const DataValidator = require('../../lib/DataValidator');
 
 // Konstanty pro ID flow cards
 const FLOW_CARDS = {
@@ -245,7 +246,6 @@ class FlowCardManager {
                     id: FLOW_CARDS.ACTIONS.TURN_ON_BATTERY_CHARGING,
                     handler: async (args, state) => {
                         try {
-                            // Získáme aktuální maximální výkon
                             const maxChargingPower = await this.device.getCapabilityValue('battery_max_charging_power');
                             const requestedLimit = args.limit || this.device.getSetting('force_charging_limit') || 5000;
                             
@@ -255,13 +255,25 @@ class FlowCardManager {
                                 settingsLimit: this.device.getSetting('force_charging_limit')
                             });
                             
-                            // Validujeme limit proti aktuálnímu maximu
-                            if (!DataValidator.validateChargingLimit(requestedLimit, maxChargingPower)) {
-                                throw new Error(`Požadovaný limit ${requestedLimit}W přesahuje maximální povolený výkon ${maxChargingPower}W`);
+                            // Základní validace čísla
+                            if (typeof requestedLimit !== 'number' || isNaN(requestedLimit)) {
+                                throw new Error(`Neplatný formát limitu: ${requestedLimit}`);
+                            }
+                
+                            // Minimální kontrola
+                            if (requestedLimit < 100) {
+                                throw new Error(`Limit ${requestedLimit}W je pod minimální hodnotou 100W`);
+                            }
+                
+                            // Kontrola proti maximálnímu výkonu
+                            if (typeof maxChargingPower === 'number' && !isNaN(maxChargingPower)) {
+                                if (requestedLimit > maxChargingPower) {
+                                    this.logger.warn(`Požadovaný limit ${requestedLimit}W byl omezen na maximální výkon ${maxChargingPower}W`);
+                                }
                             }
                             
-                            // Použijeme nižší z hodnot (požadovaný limit nebo maximální výkon)
-                            const finalLimit = Math.min(requestedLimit, maxChargingPower);
+                            // Použijeme nižší z hodnot
+                            const finalLimit = Math.min(requestedLimit, maxChargingPower || 10000);
                             this.logger.debug('Zapínám nabíjení baterie s limitem:', { finalLimit });
                             
                             await sunberryAPI.enableForceCharging(finalLimit);
