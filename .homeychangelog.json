@@ -25,5 +25,8 @@
   },
   "1.1.4": {
     "en": "New condtion card - check battery level"
+  },
+  "1.1.5": {
+    "en": "bug fix"
   }
 }
