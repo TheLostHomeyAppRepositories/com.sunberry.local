@@ -85,22 +85,41 @@ class FlowCardManager {
                             const currentLevel = args.battery_level;
                             const targetLevel = args.target_level;
                             const triggerOn = args.trigger_on;
-
-                            this.logger.debug('Trigger battery_level_changed spuštěn s:', {
+                            const previousLevel = state.previousLevel;
+                
+                            this.logger.debug('Trigger battery_level_changed kontrola podmínek:', {
                                 currentLevel,
                                 targetLevel,
-                                triggerOn
+                                triggerOn,
+                                previousLevel
                             });
-
+                
                             if (typeof currentLevel !== 'number' || isNaN(currentLevel)) {
                                 this.logger.error('Neplatná hodnota battery_level:', currentLevel);
                                 return false;
                             }
-
+                
+                            // Kontrolujeme skutečný přechod přes hranici
                             if (triggerOn === 'above') {
-                                return currentLevel > targetLevel;
+                                // Spustí se pouze pokud předtím byla hodnota pod hranicí a teď je nad
+                                const shouldTrigger = previousLevel <= targetLevel && currentLevel > targetLevel;
+                                this.logger.debug('Kontrola přechodu nad hranici:', {
+                                    shouldTrigger,
+                                    previousLevel,
+                                    targetLevel,
+                                    currentLevel
+                                });
+                                return shouldTrigger;
                             } else {
-                                return currentLevel < targetLevel;
+                                // Spustí se pouze pokud předtím byla hodnota nad hranicí a teď je pod
+                                const shouldTrigger = previousLevel >= targetLevel && currentLevel < targetLevel;
+                                this.logger.debug('Kontrola přechodu pod hranici:', {
+                                    shouldTrigger,
+                                    previousLevel,
+                                    targetLevel,
+                                    currentLevel
+                                });
+                                return shouldTrigger;
                             }
                         } catch (error) {
                             this.logger.error('Chyba při zpracování triggeru battery_level_changed:', error);

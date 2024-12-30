@@ -300,8 +300,11 @@ class SunberryDevice extends Homey.Device {
                     if (!triggerCard) {
                         this.logger.error('Trigger karta battery_level_changed nenalezena');
                     } else {
+                        // Předáváme i stav s předchozí hodnotou
                         await triggerCard.trigger(this, {
                             battery_level: values.actual_percent
+                        }, {
+                            previousLevel: oldBatteryLevel
                         });
                         
                         this.logger.debug('Trigger battery_level_changed spuštěn:', {
