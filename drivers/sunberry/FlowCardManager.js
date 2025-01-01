@@ -57,7 +57,7 @@ class FlowCardManager {
             const triggers = [
                 {
                     id: FLOW_CARDS.TRIGGERS.BATTERY_MAX_CHARGING_POWER_CHANGED,
-                    handler: async (args, state) => {
+                    handler: async (args) => {
                         try {
                             const powerValue = args.power;
                             this.logger.debug('Trigger battery_max_charging_power_changed spuštěn s:', {
@@ -263,7 +263,7 @@ class FlowCardManager {
             const actions = [
                 {
                     id: FLOW_CARDS.ACTIONS.TURN_ON_BATTERY_CHARGING,
-                    handler: async (args, state) => {
+                    handler: async (args) => {
                         try {
                             const maxChargingPower = await this.device.getCapabilityValue('battery_max_charging_power');
                             const requestedLimit = args.limit || this.device.getSetting('force_charging_limit') || 5000;
@@ -309,7 +309,7 @@ class FlowCardManager {
                 },
                 {
                     id: FLOW_CARDS.ACTIONS.TURN_OFF_BATTERY_CHARGING,
-                    handler: async (args, state) => {
+                    handler: async () => {
                         try {
                             this.logger.debug('Vypínám nabíjení baterie');
                             
@@ -327,7 +327,7 @@ class FlowCardManager {
                 },
                 {
                     id: FLOW_CARDS.ACTIONS.BLOCK_BATTERY_DISCHARGE,
-                    handler: async (args, state) => {
+                    handler: async () => {
                         try {
                             this.logger.debug('Blokuji vybíjení baterie');
                             
@@ -345,7 +345,7 @@ class FlowCardManager {
                 },
                 {
                     id: FLOW_CARDS.ACTIONS.ENABLE_BATTERY_DISCHARGE,
-                    handler: async (args, state) => {
+                    handler: async () => {
                         try {
                             this.logger.debug('Povoluji vybíjení baterie');
                             

@@ -29,6 +29,9 @@
     "donate": {
       "paypal": {
         "username": "pechjiri"
+      },
+      "githubSponsors": {
+        "username": "PechJiri"
       }
     }
   },

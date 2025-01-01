@@ -215,7 +215,7 @@ class SunberryDevice extends Homey.Device {
     /**
      * Zpracování změn nastavení
      */
-    async onSettings({ oldSettings, newSettings, changedKeys }) {
+    async onSettings({ newSettings, changedKeys }) {
         try {
             if (changedKeys.includes('update_interval')) {
                 await this.intervalManager.updateInterval(newSettings.update_interval);
