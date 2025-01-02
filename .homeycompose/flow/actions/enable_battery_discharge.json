@@ -1,7 +1,0 @@
-{
-    "id": "enable_battery_discharge",
-    "title": {
-      "en": "Enable battery discharge"
-    },
-    "handler": "enableBatteryDischarge"
-}

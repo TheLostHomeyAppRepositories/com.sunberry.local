@@ -30,6 +30,9 @@
     "donate": {
       "paypal": {
         "username": "pechjiri"
+      },
+      "githubSponsors": {
+        "username": "PechJiri"
       }
     }
   },
@@ -43,21 +46,20 @@
       {
         "id": "battery_level_changed",
         "title": {
-          "en": "Battery level reaches"
+          "en": "Battery reaches level"
         },
         "titleFormatted": {
-          "en": "Battery level [[trigger_on]] [[target_level]]%"
+          "en": "Battery reaches [[target_level]]%"
         },
-        "tokens": [
-          {
-            "name": "battery_level",
-            "type": "number",
-            "title": {
-              "en": "Level"
-            }
-          }
-        ],
+        "hint": {
+          "en": "Triggers when battery level exactly matches your target value (e.g., when battery reaches exactly 80%)"
+        },
         "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=sunberry"
+          },
           {
             "name": "target_level",
             "type": "number",
@@ -66,28 +68,10 @@
             },
             "min": 0,
             "max": 100,
-            "step": 1
-          },
-          {
-            "name": "trigger_on",
-            "type": "dropdown",
-            "title": {
-              "en": "Trigger when"
-            },
-            "values": [
-              {
-                "id": "above",
-                "title": {
-                  "en": "Goes above"
-                }
-              },
-              {
-                "id": "below",
-                "title": {
-                  "en": "Goes below"
-                }
-              }
-            ]
+            "step": 1,
+            "placeholder": {
+              "en": "Enter battery level"
+            }
           }
         ]
       },
@@ -105,6 +89,13 @@
             },
             "example": 10000
           }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=sunberry"
+          }
         ]
       }
     ],
@@ -118,6 +109,11 @@
           "en": "Battery level is [[comparison]] [[level]]%"
         },
         "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=sunberry"
+          },
           {
             "name": "comparison",
             "type": "dropdown",
@@ -157,14 +153,30 @@
       {
         "id": "is_battery_discharge_blocked",
         "title": {
-          "en": "Battery discharge is blocked"
-        }
+          "en": "Battery discharge is !{{blocked|not blocked}}"
+        },
+        "invertible": true,
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=sunberry"
+          }
+        ]
       },
       {
         "id": "is_force_charging",
         "title": {
-          "en": "Battery is force charging"
-        }
+          "en": "Battery is !{{force charging|not force charging}}"
+        },
+        "invertible": true,
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=sunberry"
+          }
+        ]
       }
     ],
     "actions": [
@@ -173,25 +185,51 @@
         "title": {
           "en": "Block battery discharge"
         },
-        "handler": "blockBatteryDischarge"
+        "handler": "blockBatteryDischarge",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=sunberry"
+          }
+        ]
       },
       {
         "id": "enable_battery_discharge",
         "title": {
           "en": "Enable battery discharge"
         },
-        "handler": "enableBatteryDischarge"
+        "handler": "enableBatteryDischarge",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=sunberry"
+          }
+        ]
       },
       {
         "id": "turn_off_battery_charging",
         "title": {
           "en": "Turn off force battery charging"
         },
-        "handler": "turnOffBatteryCharging"
+        "handler": "turnOffBatteryCharging",
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=sunberry"
+          }
+        ]
       },
       {
         "id": "turn_on_battery_charging",
         "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=sunberry"
+          },
           {
             "name": "limit",
             "type": "number",

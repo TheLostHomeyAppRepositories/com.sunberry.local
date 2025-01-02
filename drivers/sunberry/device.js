@@ -49,10 +49,10 @@ class SunberryDevice extends Homey.Device {
             await this.initializeLogger();
             await this.initializeCapabilities();
             await this.initializeFlowCards();
+            await this.registerFlowCardHandlers();  // Nové
             await this.initializeAPI();
             await this.loadCachedValues();
             
-            // Inicializace IntervalManageru místo startDataPolling
             this.intervalManager = new IntervalManager(this);
             this.logger.info('Volám startPolling() v onInit');
             await this.intervalManager.startPolling();
@@ -78,14 +78,12 @@ class SunberryDevice extends Homey.Device {
             this.logger = this.homey.appLogger;
         }
     
-        // Načteme nastavení, ale defaultně necháme logy zapnuté
         const settings = this.getSettings();
         const enableDebugLogs = settings.hasOwnProperty('enable_debug_logs') 
             ? settings.enable_debug_logs 
             : true;
             
         this.logger.setEnabled(enableDebugLogs);
-        console.log('Device logger inicializován, debug logs:', enableDebugLogs);
         this.logger.info('Logger byl inicializován');
     }
 
@@ -111,8 +109,39 @@ class SunberryDevice extends Homey.Device {
      */
     async initializeFlowCards() {
         this.flowCardManager = new FlowCardManager(this.homey, this);
+        this.flowCardManager.setLogger(this.logger);  // Nové - předání loggeru
         await this.flowCardManager.initialize();
         this.logger.info('Flow karty byly inicializovány');
+    }
+
+    /**
+     * Registrace handlerů pro flow karty
+     */
+    async registerFlowCardHandlers() {
+        try {
+            // Registrace akčních karet
+            const actionCards = {
+                'turn_on_battery_charging': this.turnOnBatteryCharging.bind(this),
+                'turn_off_battery_charging': this.turnOffBatteryCharging.bind(this),
+                'block_battery_discharge': this.blockBatteryDischarge.bind(this),
+                'enable_battery_discharge': this.enableBatteryDischarge.bind(this)
+            };
+
+            for (const [cardId, handler] of Object.entries(actionCards)) {
+                const card = this.homey.flow.getActionCard(cardId);
+                if (card) {
+                    card.registerRunListener(async (args, state) => {
+                        return await handler(args);
+                    });
+                    this.logger.debug(`Registrován handler pro kartu ${cardId}`);
+                }
+            }
+
+            this.logger.info('Flow card handlery byly úspěšně registrovány');
+        } catch (error) {
+            this.logger.error('Chyba při registraci flow card handlerů:', error);
+            throw error;
+        }
     }
 
     /**
@@ -136,8 +165,8 @@ class SunberryDevice extends Homey.Device {
             const storedValues = await this.getStoreValue('cachedMeasurements');
             if (storedValues) {
                 this.#cachedValues = { ...this.#cachedValues, ...storedValues };
-                await this.setInitialValues();
             }
+            await this.setInitialValues();
         } catch (error) {
             this.logger.error('Chyba při načítání cache:', error);
         }
@@ -158,45 +187,35 @@ class SunberryDevice extends Homey.Device {
         }
     }
 
+    /**
+     * Registrace capability listenerů
+     */
     async registerCapabilityListeners() {
         try {
-            // Listener pro force_charging
             this.registerCapabilityListener('force_charging', async (value) => {
                 this.logger.info('Změna force_charging na:', value);
                 try {
                     if (value) {
-                        const limit = this.getSetting('force_charging_limit') || 5000;
-                        this.logger.debug('Zapínám force charging s limitem:', limit);
-                        
-                        await sunberryAPI.enableForceCharging(limit);
-                        await this.setCapabilityValue('force_charging', true);
-                        
-                        this.logger.info('Force charging úspěšně zapnut');
+                        const limit = this.getSetting('force_charging_limit') || SETTINGS.DEFAULT_CHARGING_LIMIT;
+                        await this.turnOnBatteryCharging({ limit });
                     } else {
-                        this.logger.debug('Vypínám force charging');
-                        
-                        await sunberryAPI.disableForceCharging();
-                        await this.setCapabilityValue('force_charging', false);
-                        
-                        this.logger.info('Force charging úspěšně vypnut');
+                        await this.turnOffBatteryCharging();
                     }
                     return true;
                 } catch (error) {
                     this.logger.error('Chyba při nastavení force_charging:', error);
-                    
                     await this.setCapabilityValue('force_charging', !value).catch(this.logger.error);
                     throw error;
                 }
             });
     
-            // Listener pro block_battery_discharge
             this.registerCapabilityListener('block_battery_discharge', async (value) => {
                 this.logger.info('Změna block_battery_discharge na:', value);
                 try {
                     if (value) {
-                        await sunberryAPI.blockBatteryDischarge();
+                        await this.blockBatteryDischarge();
                     } else {
-                        await sunberryAPI.enableBatteryDischarge();
+                        await this.enableBatteryDischarge();
                     }
                     return true;
                 } catch (error) {
@@ -270,85 +289,30 @@ class SunberryDevice extends Homey.Device {
             if (!values || !DataValidator.validateBatteryValues(values)) {
                 throw new Error('Nepodařilo se získat platné hodnoty z baterie');
             }
-    
-            const oldMaxChargingPower = this.getCapabilityValue(CAPABILITIES.BATTERY_MAX_CHARGING_POWER);
-            const oldBatteryLevel = this.getCapabilityValue(CAPABILITIES.MEASURE_BATTERY_PERCENT);
-            
-            if (values.max_charging_power !== oldMaxChargingPower) {
-                try {
-                    const triggerCard = await this.homey.flow.getDeviceTriggerCard('battery_max_charging_power_changed');
-                    if (!triggerCard) {
-                        this.logger.error('Trigger karta battery_max_charging_power_changed nenalezena');
-                    } else {
-                        this.logger.debug('Spouštím trigger s hodnotami:', {
-                            oldPower: oldMaxChargingPower,
-                            newPower: values.max_charging_power
-                        });
-                        
-                        await triggerCard.trigger(this, {
-                            power: values.max_charging_power
-                        });
-                    }
-                } catch (error) {
-                    this.logger.error('Chyba při spouštění triggeru battery_max_charging_power_changed:', error);
-                }
-            }
-            
-            if (values.actual_percent !== oldBatteryLevel) {
-                try {
-                    const triggerCard = await this.homey.flow.getDeviceTriggerCard('battery_level_changed');
-                    if (!triggerCard) {
-                        this.logger.error('Trigger karta battery_level_changed nenalezena');
-                    } else {
-                        // Předáváme i stav s předchozí hodnotou
-                        await triggerCard.trigger(this, {
-                            battery_level: values.actual_percent
-                        }, {
-                            previousLevel: oldBatteryLevel
-                        });
-                        
-                        this.logger.debug('Trigger battery_level_changed spuštěn:', {
-                            oldLevel: oldBatteryLevel,
-                            newLevel: values.actual_percent
-                        });
-                    }
-                } catch (error) {
-                    this.logger.error('Chyba při spouštění triggeru battery_level_changed:', error);
-                }
-            }
-    
+
+            // Výpočet zbývající kapacity
             let remainingKwhToFull = null;
-            if (values.actual_kWh && values.actual_percent) {
-                if (values.actual_percent > 0 && values.actual_percent <= 100) {
-                    const totalCapacity = values.actual_kWh / (values.actual_percent / 100);
-                    remainingKwhToFull = Math.max(0, totalCapacity - values.actual_kWh);
-                    
-                    this.logger.debug('Výpočet remaining_kWh_to_full:', {
-                        actualKwh: values.actual_kWh,
-                        actualPercent: values.actual_percent,
-                        totalCapacity,
-                        remainingKwhToFull
-                    });
-                }
+            if (values.actual_kWh && values.actual_percent > 0 && values.actual_percent <= 100) {
+                const totalCapacity = values.actual_kWh / (values.actual_percent / 100);
+                remainingKwhToFull = Math.max(0, totalCapacity - values.actual_kWh);
             }
-    
+
+            // Aktualizace capabilities
             const updates = [
                 { capability: CAPABILITIES.MEASURE_BATTERY_KWH, value: values.actual_kWh },
                 { capability: CAPABILITIES.MEASURE_BATTERY_PERCENT, value: values.actual_percent },
                 { capability: CAPABILITIES.BATTERY_MAX_CHARGING_POWER, value: values.max_charging_power },
                 { capability: CAPABILITIES.REMAINING_KWH_TO_FULL, value: remainingKwhToFull }
             ];
-    
+
             await this.processUpdates(updates);
-            await this.updateCache('battery', {
-                ...values,
-                remaining_kWh_to_full: remainingKwhToFull
-            });
+            await this.updateCache('battery', values);
+            
         } catch (error) {
             this.logger.error('Chyba při aktualizaci battery values:', error);
             throw error;
         }
-    }
+    }   
 
     /**
      * Zpracování aktualizací capabilities
@@ -356,8 +320,37 @@ class SunberryDevice extends Homey.Device {
     async processUpdates(updates) {
         await Promise.all(updates.map(async update => {
             try {
+                const oldValue = this.getCapabilityValue(update.capability);
+                
                 if (DataValidator.validateCapabilityValue(update.capability, update.value)) {
                     await this.setCapabilityValue(update.capability, update.value);
+                    
+                    // Kontrola a spuštění triggerů
+                    if (update.capability === 'measure_battery_percent' && oldValue !== update.value) {
+                        const tokens = {};
+                        const state = { battery_level: update.value };
+                        
+                        // Spustíme trigger pro změnu úrovně baterie
+                        await this.homey.flow
+                            .getDeviceTriggerCard('battery_level_changed')
+                            .trigger(this, tokens, state)
+                            .catch(this.logger.error);
+                            
+                        this.logger.debug('Trigger battery_level_changed spuštěn:', { oldValue, newValue: update.value });
+                    }
+                    
+                    if (update.capability === 'battery_max_charging_power' && oldValue !== update.value) {
+                        const tokens = { power: update.value };
+                        const state = {};
+                        
+                        // Spustíme trigger pro změnu maximálního nabíjecího výkonu
+                        await this.homey.flow
+                            .getDeviceTriggerCard('battery_max_charging_power_changed')
+                            .trigger(this, tokens, state)
+                            .catch(this.logger.error);
+                            
+                        this.logger.debug('Trigger battery_max_charging_power_changed spuštěn:', { oldValue, newValue: update.value });
+                    }
                 }
             } catch (error) {
                 this.logger.error(`Chyba při aktualizaci ${update.capability}:`, error);
@@ -387,6 +380,69 @@ class SunberryDevice extends Homey.Device {
             await this.setStoreValue('cachedMeasurements', this.#cachedValues);
         } catch (error) {
             this.logger.error('Chyba při aktualizaci cache:', error);
+        }
+    }
+    
+    /**
+     * Flow karta - Blokování vybíjení baterie
+     */
+    async blockBatteryDischarge() {
+        try {
+            await sunberryAPI.blockBatteryDischarge();
+            await this.setCapabilityValue('block_battery_discharge', true);
+            return true;
+        } catch (error) {
+            this.logger.error('Chyba při blokování vybíjení baterie:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Flow karta - Povolení vybíjení baterie
+     */
+    async enableBatteryDischarge() {
+        try {
+            await sunberryAPI.enableBatteryDischarge();
+            await this.setCapabilityValue('block_battery_discharge', false);
+            return true;
+        } catch (error) {
+            this.logger.error('Chyba při povolení vybíjení baterie:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Flow karta - Vypnutí nabíjení baterie
+     */
+    async turnOffBatteryCharging() {
+        try {
+            await sunberryAPI.disableForceCharging();
+            await this.setCapabilityValue('force_charging', false);
+            return true;
+        } catch (error) {
+            this.logger.error('Chyba při vypnutí nabíjení baterie:', error);
+            throw error;
+        }
+    }
+
+   /**
+     * Flow karta - Zapnutí nabíjení baterie
+     */
+   async turnOnBatteryCharging(args) {
+    try {
+        const maxChargingPower = await this.getCapabilityValue('battery_max_charging_power');
+        const limit = args?.limit || this.getSetting('force_charging_limit') || SETTINGS.DEFAULT_CHARGING_LIMIT;
+        
+        if (!DataValidator.validateChargingLimit(limit, maxChargingPower)) {
+            throw new Error(`Neplatný limit pro nabíjení: ${limit}`);
+        }
+        
+        await sunberryAPI.enableForceCharging(limit);
+        await this.setCapabilityValue('force_charging', true);
+        return true;
+        } catch (error) {
+        this.logger.error('Chyba při zapnutí nabíjení baterie:', error);
+        throw error;
         }
     }
 

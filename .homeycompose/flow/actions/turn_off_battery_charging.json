@@ -1,7 +1,0 @@
-{
-    "id": "turn_off_battery_charging",
-    "title": {
-      "en": "Turn off force battery charging"
-    },
-    "handler": "turnOffBatteryCharging"
-  }

@@ -1,0 +1,151 @@
+{
+    "triggers": [
+      {
+        "id": "battery_level_changed",
+        "title": {
+          "en": "Battery reaches level"
+        },
+        "titleFormatted": {
+          "en": "Battery reaches [[target_level]]%"
+        },
+        "hint": {
+          "en": "Triggers when battery level exactly matches your target value (e.g., when battery reaches exactly 80%)"
+        },
+        "args": [
+          {
+            "name": "target_level",
+            "type": "number",
+            "title": {
+              "en": "Level"
+            },
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "placeholder": {
+              "en": "Enter battery level"
+            }
+          }
+        ]
+      },
+      {
+        "id": "battery_max_charging_power_changed",
+        "title": {
+          "en": "Maximum battery charging power changed"
+        },
+        "tokens": [
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Power"
+            },
+            "example": 10000
+          }
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "id": "battery_level_check",
+        "title": {
+          "en": "Battery level is above/bellow specified level"
+        },
+        "titleFormatted": {
+          "en": "Battery level is [[comparison]] [[level]]%"
+        },
+        "args": [
+          {
+            "name": "comparison",
+            "type": "dropdown",
+            "title": {
+              "en": "Comparison"
+            },
+            "values": [
+              {
+                "id": "below",
+                "title": {
+                  "en": "below"
+                }
+              },
+              {
+                "id": "above",
+                "title": {
+                  "en": "above"
+                }
+              }
+            ]
+          },
+          {
+            "name": "level",
+            "type": "number",
+            "title": {
+              "en": "Level (%)"
+            },
+            "placeholder": {
+              "en": "Enter battery level"
+            },
+            "min": 0,
+            "max": 100,
+            "step": 1
+          }
+        ]
+      },
+      {
+        "id": "is_battery_discharge_blocked",
+        "title": {
+          "en": "Battery discharge is !{{blocked|not blocked}}"
+        },
+        "invertible": true
+      },
+      {
+        "id": "is_force_charging",
+        "title": {
+          "en": "Battery is !{{force charging|not force charging}}"
+        },
+        "invertible": true
+      }
+    ],
+    "actions": [
+      {
+        "id": "block_battery_discharge",
+        "title": {
+          "en": "Block battery discharge"
+        },
+        "handler": "blockBatteryDischarge"
+      },
+      {
+        "id": "enable_battery_discharge",
+        "title": {
+          "en": "Enable battery discharge"
+        },
+        "handler": "enableBatteryDischarge"
+      },
+      {
+        "id": "turn_off_battery_charging",
+        "title": {
+          "en": "Turn off force battery charging"
+        },
+        "handler": "turnOffBatteryCharging"
+      },
+      {
+        "id": "turn_on_battery_charging",
+        "args": [
+          {
+            "name": "limit",
+            "type": "number",
+            "title": {
+              "en": "Charging limit (W)"
+            },
+            "min": 100,
+            "max": 10000
+          }
+        ],
+        "title": {
+          "en": "Turn on force battery charging with defined W"
+        },
+        "titleFormatted": {
+          "en": "Turn on force battery charging with [[limit]] W"
+        }
+      }
+    ]
+  }

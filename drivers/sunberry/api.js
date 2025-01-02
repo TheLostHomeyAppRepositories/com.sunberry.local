@@ -11,6 +11,34 @@ const API_ENDPOINTS = {
     BATTERY_MANAGEMENT: '/battery_management/timers'
 };
 
+// Konstanty pro typy operací - přehlednější logování
+const OPERATION_TYPES = {
+    FETCH_GRID: {
+        id: 'FETCH_GRID',
+        description: 'Načítání hodnot sítě'
+    },
+    FETCH_BATTERY: {
+        id: 'FETCH_BATTERY',
+        description: 'Načítání hodnot baterie'
+    },
+    ENABLE_CHARGING: {
+        id: 'ENABLE_CHARGING',
+        description: 'Povolení vynuceného nabíjení'
+    },
+    DISABLE_CHARGING: {
+        id: 'DISABLE_CHARGING',
+        description: 'Vypnutí vynuceného nabíjení'
+    },
+    BLOCK_DISCHARGE: {
+        id: 'BLOCK_DISCHARGE',
+        description: 'Blokování vybíjení baterie'
+    },
+    ENABLE_DISCHARGE: {
+        id: 'ENABLE_DISCHARGE',
+        description: 'Povolení vybíjení baterie'
+    }
+};
+
 // Konstanty pro výchozí hodnoty
 const DEFAULT_VALUES = {
     GRID: { L1: null, L2: null, L3: null, Total: null },
@@ -96,10 +124,10 @@ class SunberryAPI {
     }
 
     /**
-     * Obecná funkce pro API požadavky
+     * Obecná funkce pro API požadavky s vylepšeným logováním
      * @private
      */
-    async apiRequest({ method = 'GET', endpoint, payload = null, actionDescription }) {
+    async apiRequest({ method = 'GET', endpoint, payload = null, operationType }) {
         this.ensureLogger();
         const url = `${this.baseUrl}${endpoint}`;
         const maxRetries = 3;
@@ -107,11 +135,13 @@ class SunberryAPI {
     
         while (attempt < maxRetries) {
             try {
-                this.logger.debug(`API Request [${method}]:`, { 
-                    url, 
-                    payload,
+                this.logger.debug(`API Request [${operationType.id}]:`, { 
+                    method,
+                    url,
+                    payload: payload ? this.#sanitizePayload(payload) : null,
                     attempt: attempt + 1,
-                    maxRetries
+                    maxRetries,
+                    description: operationType.description
                 });
     
                 const config = {
@@ -139,25 +169,24 @@ class SunberryAPI {
                     throw new Error(`HTTP ${response.status}`);
                 }
     
-                const data = response.data;
-                this.logger.debug(`${actionDescription} - odpověď přijata:`, { 
+                this.logger.debug(`${operationType.description} - odpověď:`, { 
                     status: response.status,
                     duration,
-                    dataLength: typeof data === 'string' ? data.length : JSON.stringify(data).length
+                    dataSize: response.data ? response.data.length : 0,
+                    operationId: operationType.id
                 });
     
-                return { success: true, data };
+                return { success: true, data: response.data };
             } catch (error) {
-                this.logger.error(`${actionDescription} - pokus ${attempt + 1} selhal:`, {
+                this.logger.error(`${operationType.description} - pokus ${attempt + 1} selhal:`, {
                     message: error.message,
                     code: error.code,
-                    response: error.response?.status,
-                    config: error.config
+                    status: error.response?.status,
+                    operationId: operationType.id
                 });
     
                 if (attempt === maxRetries - 1) {
-                    this.logger.error(`${actionDescription} - všechny pokusy selhaly`, error);
-                    return { success: false, data: null, error: error.message };
+                    return { success: false, error: error.message };
                 }
     
                 await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
@@ -166,14 +195,27 @@ class SunberryAPI {
         }
     }
 
+    /**
+     * Sanitizace payloadu pro bezpečné logování
+     * @private
+     */
+    #sanitizePayload(payload) {
+        const sanitized = { ...payload };
+        // Odstranění citlivých údajů
+        delete sanitized.Cookie;
+        return sanitized;
+    }
+
+    /**
+     * Získání hodnot ze sítě
+     */
     async getGridValues() {
         this.ensureLogger();
-        this.logger.debug('Načítání hodnot sítě začíná');
         
         try {
             const result = await this.apiRequest({
                 endpoint: API_ENDPOINTS.GRID_VALUES,
-                actionDescription: 'Načítání hodnot sítě'
+                operationType: OPERATION_TYPES.FETCH_GRID
             });
     
             if (!result.success) {
@@ -182,8 +224,7 @@ class SunberryAPI {
             }
     
             const values = this.parseGridHtml(result.data);
-            this.logger.debug('Získané hodnoty sítě:', values);
-    
+            
             if (!DataValidator.validateGridValues(values)) {
                 this.logger.error('Získané hodnoty sítě nejsou validní:', values);
                 return DEFAULT_VALUES.GRID;
@@ -196,14 +237,16 @@ class SunberryAPI {
         }
     }
 
+    /**
+     * Získání hodnot z baterie
+     */
     async getBatteryValues() {
         this.ensureLogger();
-        this.logger.debug('Načítání hodnot baterie začíná');
         
         try {
             const result = await this.apiRequest({
                 endpoint: API_ENDPOINTS.BATTERY_VALUES,
-                actionDescription: 'Načítání hodnot baterie'
+                operationType: OPERATION_TYPES.FETCH_BATTERY
             });
     
             if (!result.success) {
@@ -212,8 +255,7 @@ class SunberryAPI {
             }
     
             const values = this.parseBatteryHtml(result.data);
-            this.logger.debug('Získané hodnoty baterie:', values);
-    
+            
             if (!DataValidator.validateBatteryValues(values)) {
                 this.logger.error('Získané hodnoty baterie nejsou validní:', values);
                 return DEFAULT_VALUES.BATTERY;
@@ -226,24 +268,15 @@ class SunberryAPI {
         }
     }
 
+    /**
+     * Povolení vynuceného nabíjení
+     */
     async enableForceCharging(limit) {
         this.ensureLogger();
-        
         const numericLimit = Number(limit);
         
-        this.logger.debug('Požadavek na force charging s limitem:', {
-            rawLimit: limit,
-            numericLimit
-        });
-        
-        // Základní validace čísla
-        if (typeof numericLimit !== 'number' || isNaN(numericLimit)) {
+        if (!DataValidator.validateChargingLimit(numericLimit)) {
             throw new Error(`Neplatný limit pro nabíjení: ${limit}`);
-        }
-    
-        // Minimální kontrola
-        if (numericLimit < 100) {
-            throw new Error(`Limit ${numericLimit}W je pod minimální hodnotou 100W`);
         }
     
         const payload = {
@@ -251,24 +284,25 @@ class SunberryAPI {
             stop_0: '23:59',
             force_chg_enable_0: 'on',
             force_chg_power_0: numericLimit.toString(),
-            Mon_0: 'Mon_0',
-            Tue_0: 'Tue_0',
-            Wed_0: 'Wed_0',
-            Thu_0: 'Thu_0',
-            Fri_0: 'Fri_0',
-            Sat_0: 'Sat_0',
-            Sun_0: 'Sun_0',
-            submit: ''
+            Mon_0: 'Mon_0', Tue_0: 'Tue_0', Wed_0: 'Wed_0',
+            Thu_0: 'Thu_0', Fri_0: 'Fri_0', Sat_0: 'Sat_0',
+            Sun_0: 'Sun_0', submit: ''
         };
     
         return await this.apiRequest({
             method: 'POST',
             endpoint: API_ENDPOINTS.BATTERY_MANAGEMENT,
             payload,
-            actionDescription: `Povolení vynuceného nabíjení s limitem ${numericLimit}W`
+            operationType: {
+                ...OPERATION_TYPES.ENABLE_CHARGING,
+                description: `${OPERATION_TYPES.ENABLE_CHARGING.description} s limitem ${numericLimit}W`
+            }
         });
     }
 
+    /**
+     * Vypnutí vynuceného nabíjení
+     */
     async disableForceCharging() {
         this.ensureLogger();
         const payload = {
@@ -276,24 +310,22 @@ class SunberryAPI {
             stop_0: '23:59',
             force_chg_power_0: '100',
             bat_chg_limit_power_0: '0',
-            Mon_0: 'Mon_0',
-            Tue_0: 'Tue_0',
-            Wed_0: 'Wed_0',
-            Thu_0: 'Thu_0',
-            Fri_0: 'Fri_0',
-            Sat_0: 'Sat_0',
-            Sun_0: 'Sun_0',
-            submit: ''
+            Mon_0: 'Mon_0', Tue_0: 'Tue_0', Wed_0: 'Wed_0',
+            Thu_0: 'Thu_0', Fri_0: 'Fri_0', Sat_0: 'Sat_0',
+            Sun_0: 'Sun_0', submit: ''
         };
 
         return await this.apiRequest({
             method: 'POST',
             endpoint: API_ENDPOINTS.BATTERY_MANAGEMENT,
             payload,
-            actionDescription: 'Zakázání vynuceného nabíjení'
+            operationType: OPERATION_TYPES.DISABLE_CHARGING
         });
     }
 
+    /**
+     * Blokování vybíjení baterie
+     */
     async blockBatteryDischarge() {
         this.ensureLogger();
         const payload = {
@@ -301,24 +333,22 @@ class SunberryAPI {
             stop_0: '23:59',
             bat_chg_limit_power_0: '0',
             block_bat_dis_0: 'on',
-            Mon_0: 'Mon_0',
-            Tue_0: 'Tue_0',
-            Wed_0: 'Wed_0',
-            Thu_0: 'Thu_0',
-            Fri_0: 'Fri_0',
-            Sat_0: 'Sat_0',
-            Sun_0: 'Sun_0',
-            submit: ''
+            Mon_0: 'Mon_0', Tue_0: 'Tue_0', Wed_0: 'Wed_0',
+            Thu_0: 'Thu_0', Fri_0: 'Fri_0', Sat_0: 'Sat_0',
+            Sun_0: 'Sun_0', submit: ''
         };
 
         return await this.apiRequest({
             method: 'POST',
             endpoint: API_ENDPOINTS.BATTERY_MANAGEMENT,
             payload,
-            actionDescription: 'Povolení blokování vybíjení baterie'
+            operationType: OPERATION_TYPES.BLOCK_DISCHARGE
         });
     }
 
+    /**
+     * Povolení vybíjení baterie
+     */
     async enableBatteryDischarge() {
         this.ensureLogger();
         const payload = {
@@ -326,44 +356,37 @@ class SunberryAPI {
             stop_0: '23:59',
             force_chg_power_0: '100',
             bat_chg_limit_power_0: '0',
-            Mon_0: 'Mon_0',
-            Tue_0: 'Tue_0',
-            Wed_0: 'Wed_0',
-            Thu_0: 'Thu_0',
-            Fri_0: 'Fri_0',
-            Sat_0: 'Sat_0',
-            Sun_0: 'Sun_0',
-            submit: ''
+            Mon_0: 'Mon_0', Tue_0: 'Tue_0', Wed_0: 'Wed_0',
+            Thu_0: 'Thu_0', Fri_0: 'Fri_0', Sat_0: 'Sat_0',
+            Sun_0: 'Sun_0', submit: ''
         };
 
         return await this.apiRequest({
             method: 'POST',
             endpoint: API_ENDPOINTS.BATTERY_MANAGEMENT,
             payload,
-            actionDescription: 'Zakázání blokování vybíjení baterie'
+            operationType: OPERATION_TYPES.ENABLE_DISCHARGE
         });
     }
 
+    /**
+     * Parsování HTML s hodnotami sítě
+     * @private
+     */
     parseGridHtml(gridHtml) {
-        // Helper funkce pro parsování hodnot
         const parseValue = (matchResult) => {
             if (!matchResult) return null;
-            
             const value = matchResult[1];
-            // Kontrola na "<30" formát
-            if (value.includes('<')) {
-                return 0; // nebo můžeme vrátit 15 jako střední hodnotu mezi 0-30
-            }
+            if (value.includes('<')) return 0;
             return parseInt(value, 10);
         };
     
-        // Upravené regulární výrazy pro zachycení i "<30" formátu
         const L1Match = gridHtml.match(/L1:\s*<\/label>\s*<label[^>]*>\s*([^W]*)\s*W/);
         const L2Match = gridHtml.match(/L2:\s*<\/label>\s*<label[^>]*>\s*([^W]*)\s*W/);
         const L3Match = gridHtml.match(/L3:\s*<\/label>\s*<label[^>]*>\s*([^W]*)\s*W/);
         const totalMatch = gridHtml.match(/Celkem:\s*<\/label>\s*<label[^>]*>\s*([^W]*)\s*W/);
     
-        this.logger.debug('Parsed grid values:', {
+        this.logger.debug('Parsované hodnoty sítě:', {
             L1: L1Match ? L1Match[1] : null,
             L2: L2Match ? L2Match[1] : null,
             L3: L3Match ? L3Match[1] : null,
@@ -378,15 +401,19 @@ class SunberryAPI {
         };
     }
 
+    /**
+     * Parsování HTML s hodnotami baterie
+     * @private
+     */
     parseBatteryHtml(batteryHtml) {
         const kWhMatch = batteryHtml.match(/<label[^>]*>\s*(\d+)\s*Wh<\/label>/);
         const percentMatch = batteryHtml.match(/<label[^>]*>\s*(\d+)\s*%\s*<\/label>/);
         const maxChargingMatch = batteryHtml.match(/Max nabíjení:[^>]*>[\s\S]*?<label[^>]*>\s*(\d+)\s*W<\/label>/);
     
-        this.logger.debug('Parsing battery HTML matches:', {
-            kWhMatch: kWhMatch ? kWhMatch[1] : null,
-            percentMatch: percentMatch ? percentMatch[1] : null,
-            maxChargingMatch: maxChargingMatch ? maxChargingMatch[1] : null
+        this.logger.debug('Parsování baterie - matches:', {
+            kWh: kWhMatch ? kWhMatch[1] : null,
+            percent: percentMatch ? percentMatch[1] : null,
+            maxCharging: maxChargingMatch ? maxChargingMatch[1] : null
         });
     
         const actual_kWh = kWhMatch ? parseInt(kWhMatch[1], 10) / 1000 : null;
