@@ -130,7 +130,7 @@ class SunberryDevice extends Homey.Device {
             for (const [cardId, handler] of Object.entries(actionCards)) {
                 const card = this.homey.flow.getActionCard(cardId);
                 if (card) {
-                    card.registerRunListener(async (args, state) => {
+                    card.registerRunListener(async (args) => {
                         return await handler(args);
                     });
                     this.logger.debug(`Registrován handler pro kartu ${cardId}`);
