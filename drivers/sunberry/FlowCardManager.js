@@ -1,6 +1,5 @@
 'use strict';
 
-const Logger = require('../../lib/Logger');
 const sunberryAPI = require('./api');
 const DataValidator = require('../../lib/DataValidator');
 
