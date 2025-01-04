@@ -43,5 +43,8 @@
   },
   "1.2.1": {
     "en": "New WHEN card - battery starts/stops force charging"
+  },
+  "1.2.2": {
+    "en": "bug fix"
   }
 }
