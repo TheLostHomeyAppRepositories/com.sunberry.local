@@ -1,0 +1,9 @@
+{
+  "name": "com.sunberry.local",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {},
+  "dependencies": {
+    "axios": "^1.7.9"
+  }
+}
