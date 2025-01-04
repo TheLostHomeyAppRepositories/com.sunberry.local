@@ -77,23 +77,7 @@ class FlowCardManager {
                             return false;
                         }
                     }
-                },
-                {
-                    id: 'force_charging_changed',
-                    handler: async (args, state) => {
-                        try {
-                            const forceCharging = await this.device.getCapabilityValue('force_charging');
-                            // Pro "starts" (!inverted) chceme true, pro "stops" (inverted) chceme false
-                            return args.inverted ? !forceCharging : forceCharging;
-                        } catch (error) {
-                            if (this.logger) {
-                                this.logger.error('Chyba v force_charging_changed triggeru:', error);
-                            }
-                            return false;
-                        }
-                    }
                 }
-
             ];
 
             for (const trigger of triggers) {

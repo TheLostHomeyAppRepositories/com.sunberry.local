@@ -42,6 +42,16 @@
             "example": 10000
           }
         ]
+      },
+      {
+        "id": "force_charging_changed",
+        "title": {
+          "en": "Battery !{{starts|stops}} force charging"
+        },
+        "hint": {
+          "en": "Triggers when battery force charging is turned on/off"
+        },
+        "invertible": true
       }
     ],
     "conditions": [

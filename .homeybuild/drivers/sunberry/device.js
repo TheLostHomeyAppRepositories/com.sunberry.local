@@ -351,20 +351,6 @@ class SunberryDevice extends Homey.Device {
                             
                         this.logger.debug('Trigger battery_max_charging_power_changed spuštěn:', { oldValue, newValue: update.value });
                     }
-    
-                    // Nové sledování změny force_charging
-                    if (update.capability === 'force_charging' && oldValue !== update.value) {
-                        const tokens = {};
-                        const state = { force_charging: update.value };
-                        
-                        // Spustíme trigger pro změnu force charging
-                        await this.homey.flow
-                            .getDeviceTriggerCard('force_charging_changed')
-                            .trigger(this, tokens, state)
-                            .catch(this.logger.error);
-                            
-                        this.logger.debug('Trigger force_charging_changed spuštěn:', { oldValue, newValue: update.value });
-                    }
                 }
             } catch (error) {
                 this.logger.error(`Chyba při aktualizaci ${update.capability}:`, error);
