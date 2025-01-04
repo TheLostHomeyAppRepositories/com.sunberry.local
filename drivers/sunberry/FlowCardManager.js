@@ -80,7 +80,7 @@ class FlowCardManager {
                 },
                 {
                     id: 'force_charging_changed',
-                    handler: async (args, state) => {
+                    handler: async (args) => {
                         try {
                             const forceCharging = await this.device.getCapabilityValue('force_charging');
                             // Pro "starts" (!inverted) chceme true, pro "stops" (inverted) chceme false
