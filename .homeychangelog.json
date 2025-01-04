@@ -40,5 +40,8 @@
   },
   "1.2.0": {
     "en": "Code refactor, code style, bugfix of flowcards"
+  },
+  "1.2.1": {
+    "en": "New WHEN card - battery starts/stops force charging"
   }
 }
