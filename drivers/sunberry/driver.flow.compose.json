@@ -44,14 +44,22 @@
         ]
       },
       {
-        "id": "force_charging_changed",
+        "id": "force_charging_started",
         "title": {
-          "en": "Battery !{{starts|stops}} force charging"
+          "en": "Battery starts force charging"
         },
         "hint": {
-          "en": "Triggers when battery force charging is turned on/off"
+          "en": "Triggers when battery force charging is turned on"
+        }
+      },
+      {
+        "id": "force_charging_stopped",
+        "title": {
+          "en": "Battery stops force charging"
         },
-        "invertible": true
+        "hint": {
+          "en": "Triggers when battery force charging is turned off"
+        }
       }
     ],
     "conditions": [

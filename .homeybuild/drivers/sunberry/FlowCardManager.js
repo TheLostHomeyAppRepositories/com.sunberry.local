@@ -78,28 +78,15 @@ class FlowCardManager {
                     }
                 },
                 {
-                    id: 'force_charging_started',
-                    handler: async (state) => {
+                    id: 'force_charging_changed',
+                    handler: async (args) => {
                         try {
-                            // Trigger se spustí pouze když je force_charging true
-                            return state.force_charging === true;
+                            const forceCharging = await this.device.getCapabilityValue('force_charging');
+                            // Pro "starts" (!inverted) chceme true, pro "stops" (inverted) chceme false
+                            return args.inverted ? !forceCharging : forceCharging;
                         } catch (error) {
                             if (this.logger) {
-                                this.logger.error('Chyba v force_charging_started triggeru:', error);
-                            }
-                            return false;
-                        }
-                    }
-                },
-                {
-                    id: 'force_charging_stopped',
-                    handler: async (state) => {
-                        try {
-                            // Trigger se spustí pouze když je force_charging false
-                            return state.force_charging === false;
-                        } catch (error) {
-                            if (this.logger) {
-                                this.logger.error('Chyba v force_charging_stopped triggeru:', error);
+                                this.logger.error('Chyba v force_charging_changed triggeru:', error);
                             }
                             return false;
                         }

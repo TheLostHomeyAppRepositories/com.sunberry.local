@@ -357,14 +357,13 @@ class SunberryDevice extends Homey.Device {
                         const tokens = {};
                         const state = { force_charging: update.value };
                         
-                        // Spustíme příslušný trigger podle nové hodnoty
-                        const triggerCard = update.value ? 'force_charging_started' : 'force_charging_stopped';
+                        // Spustíme trigger pro změnu force charging
                         await this.homey.flow
-                            .getDeviceTriggerCard(triggerCard)
+                            .getDeviceTriggerCard('force_charging_changed')
                             .trigger(this, tokens, state)
                             .catch(this.logger.error);
                             
-                        this.logger.debug(`Trigger ${triggerCard} spuštěn:`, { oldValue, newValue: update.value });
+                        this.logger.debug('Trigger force_charging_changed spuštěn:', { oldValue, newValue: update.value });
                     }
                 }
             } catch (error) {
