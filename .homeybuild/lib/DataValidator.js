@@ -57,9 +57,9 @@ class DataValidator {
                 return false;
             }
         } else {
-            // Fallback na 12000W pokud nemáme maxChargingPower
-            if (limit > 12000) {
-                console.log('Limit přesahuje maximální hodnotu 12000W:', limit);
+            // Fallback na 10000W pokud nemáme maxChargingPower
+            if (limit > 10000) {
+                console.log('Limit přesahuje maximální hodnotu 10000W:', limit);
                 return false;
             }
         }
