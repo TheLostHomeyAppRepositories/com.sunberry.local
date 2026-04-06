@@ -2,7 +2,6 @@
 
 const Homey = require('homey');
 const Logger = require('../../lib/Logger');
-const sunberryAPI = require('./api');
 
 const DataValidator = require('../../lib/DataValidator');
 
@@ -40,8 +39,6 @@ class SunberryDriver extends Homey.Driver {
 
             console.log('SunberryDriver logger inicializován');
 
-            // Inicializace API
-            await sunberryAPI.initializeLogger(this.homey);
 
             this.logger.info('SunberryDriver byl úspěšně inicializován');
         } catch (error) {
@@ -101,7 +98,6 @@ class SunberryDriver extends Homey.Driver {
                     await this.testConnection(ip);
 
                     pairingData.ip_address = ip;
-                    sunberryAPI.setBaseUrl(ip);
 
                     return { success: true };
                 } catch (error) {

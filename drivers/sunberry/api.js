@@ -406,14 +406,13 @@ class SunberryAPI {
         const parseValue = (matchResult) => {
             if (!matchResult) return null;
             const value = matchResult[1];
-            if (value.includes('<')) return 0;
             return parseInt(value, 10);
         };
 
-        const L1Match = gridHtml.match(/L1:\s*<\/label>\s*<label[^>]*>\s*([^W]*)\s*W/);
-        const L2Match = gridHtml.match(/L2:\s*<\/label>\s*<label[^>]*>\s*([^W]*)\s*W/);
-        const L3Match = gridHtml.match(/L3:\s*<\/label>\s*<label[^>]*>\s*([^W]*)\s*W/);
-        const totalMatch = gridHtml.match(/Celkem:\s*<\/label>\s*<label[^>]*>\s*([^W]*)\s*W/);
+        const L1Match = gridHtml.match(/L1:\s*<\/label>\s*<label[^>]*>\s*([-\d.]+)\s*W/);
+        const L2Match = gridHtml.match(/L2:\s*<\/label>\s*<label[^>]*>\s*([-\d.]+)\s*W/);
+        const L3Match = gridHtml.match(/L3:\s*<\/label>\s*<label[^>]*>\s*([-\d.]+)\s*W/);
+        const totalMatch = gridHtml.match(/Celkem:\s*<\/label>\s*<label[^>]*>\s*([-\d.]+)\s*W/);
 
         this.logger.debug('Parsované hodnoty sítě:', {
             L1: L1Match ? L1Match[1] : null,
@@ -435,9 +434,9 @@ class SunberryAPI {
      * @private
      */
     parseBatteryHtml(batteryHtml) {
-        const kWhMatch = batteryHtml.match(/<label[^>]*>\s*(\d+)\s*Wh<\/label>/);
-        const percentMatch = batteryHtml.match(/<label[^>]*>\s*(\d+)\s*%\s*<\/label>/);
-        const maxChargingMatch = batteryHtml.match(/Max nabíjení:[^>]*>[\s\S]*?<label[^>]*>\s*(\d+)\s*W<\/label>/);
+        const kWhMatch = batteryHtml.match(/<label[^>]*>\s*([-\d.]+)\s*Wh<\/label>/);
+        const percentMatch = batteryHtml.match(/<label[^>]*>\s*([-\d.]+)\s*%\s*<\/label>/);
+        const maxChargingMatch = batteryHtml.match(/Max nabíjení:[^>]*>[\s\S]*?<label[^>]*>\s*([-\d.]+)\s*W<\/label>/);
 
         this.logger.debug('Parsování baterie - matches:', {
             kWh: kWhMatch ? kWhMatch[1] : null,
@@ -457,7 +456,4 @@ class SunberryAPI {
     }
 }
 
-// Vytvoření instance API
-const sunberryAPI = new SunberryAPI();
-
-module.exports = sunberryAPI;
+module.exports = SunberryAPI;

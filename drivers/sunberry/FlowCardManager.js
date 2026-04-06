@@ -1,6 +1,5 @@
 'use strict';
 
-const sunberryAPI = require('./api');
 const DataValidator = require('../../lib/DataValidator');
 
 class FlowCardManager {
@@ -215,28 +214,28 @@ class FlowCardManager {
                             this.logger.debug('Zapínám nabíjení baterie:', { finalLimit });
                         }
                         
-                        await sunberryAPI.enableForceCharging(finalLimit);
+                        await this.device.api.enableForceCharging(finalLimit);
                         await this.device.setCapabilityValue('force_charging', true);
                     }
                 },
                 {
                     id: 'turn_off_battery_charging',
                     handler: async () => {
-                        await sunberryAPI.disableForceCharging();
+                        await this.device.api.disableForceCharging();
                         await this.device.setCapabilityValue('force_charging', false);
                     }
                 },
                 {
                     id: 'block_battery_discharge',
                     handler: async () => {
-                        await sunberryAPI.blockBatteryDischarge();
+                        await this.device.api.blockBatteryDischarge();
                         await this.device.setCapabilityValue('block_battery_discharge', true);
                     }
                 },
                 {
                     id: 'enable_battery_discharge',
                     handler: async () => {
-                        await sunberryAPI.enableBatteryDischarge();
+                        await this.device.api.enableBatteryDischarge();
                         await this.device.setCapabilityValue('block_battery_discharge', false);
                     }
                 }

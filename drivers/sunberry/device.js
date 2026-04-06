@@ -3,7 +3,7 @@
 const Homey = require('homey');
 const Logger = require('../../lib/Logger');
 const FlowCardManager = require('./FlowCardManager');
-const sunberryAPI = require('./api'); 
+const SunberryAPI = require('./api');
 const IntervalManager = require('../../lib/IntervalManager');
 const DataValidator = require('../../lib/DataValidator');
 
@@ -153,7 +153,9 @@ class SunberryDevice extends Homey.Device {
             throw new Error('IP adresa není nastavena');
         }
 
-        await sunberryAPI.setBaseUrl(this.ipAddress);
+        this.api = new SunberryAPI();
+        await this.api.initializeLogger(this.homey);
+        await this.api.setBaseUrl(this.ipAddress);
         this.logger.info('API bylo inicializováno s IP:', this.ipAddress);
     }
 
@@ -268,7 +270,7 @@ class SunberryDevice extends Homey.Device {
             }
 
             if (changedKeys.includes('ip_address')) {
-                await sunberryAPI.setBaseUrl(newSettings.ip_address);
+                await this.api.setBaseUrl(newSettings.ip_address);
             }
 
             if (changedKeys.includes('enable_debug_logs')) {
@@ -287,7 +289,7 @@ class SunberryDevice extends Homey.Device {
      */
     async fetchAndUpdateGridValues() {
         try {
-            const values = await sunberryAPI.getGridValues();
+            const values = await this.api.getGridValues();
             if (!values || !DataValidator.validateGridValues(values)) {
                 throw new Error('Nepodařilo se získat platné hodnoty ze sítě');
             }
@@ -312,7 +314,7 @@ class SunberryDevice extends Homey.Device {
      */
     async fetchAndUpdateBatteryValues() {
         try {
-            const values = await sunberryAPI.getBatteryValues();
+            const values = await this.api.getBatteryValues();
             if (!values || !DataValidator.validateBatteryValues(values)) {
                 throw new Error('Nepodařilo se získat platné hodnoty z baterie');
             }
@@ -459,7 +461,7 @@ class SunberryDevice extends Homey.Device {
      */
     async blockBatteryDischarge() {
         try {
-            await sunberryAPI.blockBatteryDischarge();
+            await this.api.blockBatteryDischarge();
             await this.setCapabilityValue('block_battery_discharge', true);
             return true;
         } catch (error) {
@@ -473,7 +475,7 @@ class SunberryDevice extends Homey.Device {
      */
     async enableBatteryDischarge() {
         try {
-            await sunberryAPI.enableBatteryDischarge();
+            await this.api.enableBatteryDischarge();
             await this.setCapabilityValue('block_battery_discharge', false);
             return true;
         } catch (error) {
@@ -487,7 +489,7 @@ class SunberryDevice extends Homey.Device {
      */
     async turnOffBatteryCharging() {
         try {
-            await sunberryAPI.disableForceCharging();
+            await this.api.disableForceCharging();
             await this.setCapabilityValue('force_charging', false);
             return true;
         } catch (error) {
@@ -508,7 +510,7 @@ class SunberryDevice extends Homey.Device {
             throw new Error(`Neplatný limit pro nabíjení: ${limit}`);
         }
         
-        await sunberryAPI.enableForceCharging(limit);
+        await this.api.enableForceCharging(limit);
         await this.setCapabilityValue('force_charging', true);
         return true;
         } catch (error) {
